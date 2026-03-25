@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_repository.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_usecase.dart';

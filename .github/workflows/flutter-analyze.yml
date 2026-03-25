@@ -28,4 +28,6 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test
+        run: |
+          dart test test/core test/features
+          flutter test test/widget_test.dart

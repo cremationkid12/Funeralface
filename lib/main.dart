@@ -49,7 +49,7 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Phase 2 — mobile foundation',
+              'Phase 3 — public token & deeplink prep',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
