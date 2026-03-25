@@ -7,6 +7,6 @@ void main() {
     await tester.pumpWidget(const FuneralfaceApp());
 
     expect(find.text('Funeralface'), findsWidgets);
-    expect(find.textContaining('http://localhost:3000'), findsOneWidget);
+    expect(find.textContaining('API client base URL: http://localhost:3000'), findsOneWidget);
   });
 }
