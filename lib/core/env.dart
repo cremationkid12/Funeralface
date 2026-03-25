@@ -18,4 +18,17 @@ class AppEnv {
     'DEEPLINK_HOST',
     defaultValue: 'localhost',
   );
+
+  static String get flavor {
+    switch (appEnv.toLowerCase()) {
+      case 'production':
+      case 'prod':
+        return 'prod';
+      case 'staging':
+      case 'stage':
+        return 'staging';
+      default:
+        return 'dev';
+    }
+  }
 }
