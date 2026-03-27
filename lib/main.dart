@@ -33,6 +33,9 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = ApiClient(baseUrl: AppEnv.apiBaseUrl);
+    final bearerToken = AppEnv.devAuthBearerToken.trim().isEmpty
+        ? null
+        : AppEnv.devAuthBearerToken.trim();
     final settingsRepository = SettingsRepository(apiClient);
     final dashboardUseCase = DashboardUseCase(
       staffRepository: StaffRepository(apiClient),
@@ -66,11 +69,12 @@ class HomeScreen extends StatelessWidget {
             Text('APP_ENV: ${AppEnv.appEnv}'),
             Text('FLAVOR: ${AppEnv.flavor}'),
             Text('DEEPLINK_HOST: ${AppEnv.deeplinkHost}'),
+            Text('DEV_AUTH_BEARER_TOKEN set: ${AppEnv.hasDevAuthBearerToken ? "yes" : "no"}'),
             const SizedBox(height: 16),
             Text('API client base URL: ${apiClient.baseUrl}'),
             const SizedBox(height: 16),
             FutureBuilder<Map<String, dynamic>>(
-              future: settingsRepository.getSettings(),
+              future: settingsRepository.getSettings(bearerToken: bearerToken),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Text('Loading settings...');
@@ -85,7 +89,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             FutureBuilder<DashboardSummary>(
-              future: dashboardUseCase.loadSummary(),
+              future: dashboardUseCase.loadSummary(bearerToken: bearerToken),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Text('Loading dashboard summary...');
