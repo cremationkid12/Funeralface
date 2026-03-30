@@ -12,7 +12,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Future<DashboardSummary>? _summaryFuture;
+  Future<DashboardOverview>? _overviewFuture;
   var _depsReady = false;
 
   @override
@@ -20,20 +20,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.didChangeDependencies();
     if (!_depsReady) {
       _depsReady = true;
-      _summaryFuture = _load();
+      _overviewFuture = _load();
     }
   }
 
-  Future<DashboardSummary> _load() {
+  Future<DashboardOverview> _load() {
     final repos = context.read<AppRepositories>();
-    return repos.dashboard.loadSummary(bearerToken: staffBearerToken());
+    return repos.dashboard.loadOverview(bearerToken: staffBearerToken());
   }
 
   Future<void> _refresh() async {
     setState(() {
-      _summaryFuture = _load();
+      _overviewFuture = _load();
     });
-    await _summaryFuture;
+    await _overviewFuture;
   }
 
   @override
@@ -59,10 +59,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               )
             else
-              FutureBuilder<DashboardSummary>(
-                future: _summaryFuture,
+              FutureBuilder<DashboardOverview>(
+                future: _overviewFuture,
                 builder: (context, snapshot) {
-                  if (_summaryFuture == null) {
+                  if (_overviewFuture == null) {
                     return const SizedBox.shrink();
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -98,6 +98,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         value: '${s.completedAssignments}',
                         icon: Icons.check_circle_outline,
                       ),
+                      if (s.recentAssignments.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text('Recent assignments', style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        Card(
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            children: [
+                              for (var i = 0; i < s.recentAssignments.length; i++) ...[
+                                if (i > 0) const Divider(height: 1),
+                                Builder(
+                                  builder: (context) {
+                                    final m = s.recentAssignments[i];
+                                    final name = m['decedent_name']?.toString() ?? '—';
+                                    final status = m['status']?.toString() ?? '—';
+                                    return ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                      title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      subtitle: Text(
+                                        m['pickup_address']?.toString() ?? '',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      trailing: Chip(
+                                        label: Text(status, style: const TextStyle(fontSize: 11)),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   );
                 },
