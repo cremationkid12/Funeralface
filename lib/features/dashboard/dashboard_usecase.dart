@@ -1,16 +1,23 @@
 import '../assignments/assignments_repository.dart';
 import '../staff/staff_repository.dart';
 
-class DashboardSummary {
-  DashboardSummary({
+/// Dashboard counts plus a short recent-assignments list (API returns newest first).
+class DashboardOverview {
+  DashboardOverview({
     required this.staffCount,
     required this.activeAssignments,
     required this.completedAssignments,
+    required this.recentAssignments,
   });
 
   final int staffCount;
   final int activeAssignments;
   final int completedAssignments;
+
+  /// Up to [maxRecentAssignments] items, maps as returned by `/v1/assignments`.
+  final List<Map<String, dynamic>> recentAssignments;
+
+  static const int maxRecentAssignments = 5;
 }
 
 class DashboardUseCase {
@@ -23,21 +30,27 @@ class DashboardUseCase {
   final StaffRepository _staffRepository;
   final AssignmentsRepository _assignmentsRepository;
 
-  Future<DashboardSummary> loadSummary({String? bearerToken}) async {
-    final results = await Future.wait([
+  Future<DashboardOverview> loadOverview({String? bearerToken}) async {
+    final results = await Future.wait<List<dynamic>>([
       _staffRepository.listStaff(bearerToken: bearerToken),
       _assignmentsRepository.listAssignments(bearerToken: bearerToken),
     ]);
 
     final staff = results[0];
     final assignments = results[1];
-    final completed = assignments.where((a) => a['status'] == 'completed').length;
+    final completed = assignments.where((a) => (a as Map)['status'] == 'completed').length;
     final active = assignments.length - completed;
 
-    return DashboardSummary(
+    final recent = assignments
+        .take(DashboardOverview.maxRecentAssignments)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+
+    return DashboardOverview(
       staffCount: staff.length,
       activeAssignments: active,
       completedAssignments: completed,
+      recentAssignments: recent,
     );
   }
 }
