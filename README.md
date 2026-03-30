@@ -7,7 +7,7 @@ Funeralface mobile app (Flutter).
 Flutter reads config via `--dart-define` (see `lib/core/env.dart`). Example:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000 --dart-define=APP_ENV=development
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8010 --dart-define=APP_ENV=development
 ```
 
 For a physical device, use your machine LAN IP instead of `localhost`.

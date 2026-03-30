@@ -15,7 +15,7 @@ void main() {
     });
 
     final repo = FamilyAssignmentRepository(
-      ApiClient(baseUrl: 'http://localhost:3000', httpClient: client),
+      ApiClient(baseUrl: 'http://localhost:8010', httpClient: client),
     );
 
     final result = await repo.getByToken('my-token');
@@ -30,7 +30,7 @@ void main() {
     );
 
     final repo = FamilyAssignmentRepository(
-      ApiClient(baseUrl: 'http://localhost:3000', httpClient: client),
+      ApiClient(baseUrl: 'http://localhost:8010', httpClient: client),
     );
 
     final result = await repo.getByToken('t');
@@ -44,7 +44,7 @@ void main() {
     );
 
     final repo = FamilyAssignmentRepository(
-      ApiClient(baseUrl: 'http://localhost:3000', httpClient: client),
+      ApiClient(baseUrl: 'http://localhost:8010', httpClient: client),
     );
 
     final result = await repo.getByToken('t');
@@ -57,7 +57,7 @@ void main() {
     );
 
     final repo = FamilyAssignmentRepository(
-      ApiClient(baseUrl: 'http://localhost:3000', httpClient: client),
+      ApiClient(baseUrl: 'http://localhost:8010', httpClient: client),
     );
 
     final result = await repo.getByToken('t');

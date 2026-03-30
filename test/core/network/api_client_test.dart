@@ -6,11 +6,11 @@ import 'package:http/testing.dart';
 void main() {
   test('getJson returns decoded body on success', () async {
     final client = MockClient((request) async {
-      expect(request.url.toString(), 'http://localhost:3000/v1/health');
+      expect(request.url.toString(), 'http://localhost:8010/v1/health');
       return http.Response('{"status":"ok"}', 200);
     });
 
-    final api = ApiClient(baseUrl: 'http://localhost:3000', httpClient: client);
+    final api = ApiClient(baseUrl: 'http://localhost:8010', httpClient: client);
     final json = await api.getJson('/v1/health');
 
     expect(json['status'], 'ok');
@@ -18,7 +18,7 @@ void main() {
 
   test('getJson throws ApiException on non-2xx', () async {
     final client = MockClient((_) async => http.Response('{"message":"bad"}', 400));
-    final api = ApiClient(baseUrl: 'http://localhost:3000', httpClient: client);
+    final api = ApiClient(baseUrl: 'http://localhost:8010', httpClient: client);
 
     expect(
       () => api.getJson('/v1/health'),
@@ -33,7 +33,7 @@ void main() {
       return http.Response('{"id":"1"}', 201);
     });
 
-    final api = ApiClient(baseUrl: 'http://localhost:3000', httpClient: client);
+    final api = ApiClient(baseUrl: 'http://localhost:8010', httpClient: client);
     final json = await api.postJson('/v1/staff', body: {'name': 'demo'});
     expect(json['id'], '1');
   });
@@ -44,7 +44,7 @@ void main() {
       return http.Response('', 204);
     });
 
-    final api = ApiClient(baseUrl: 'http://localhost:3000', httpClient: client);
+    final api = ApiClient(baseUrl: 'http://localhost:8010', httpClient: client);
     await api.delete('/v1/staff/1');
   });
 }

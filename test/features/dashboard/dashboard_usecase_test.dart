@@ -22,7 +22,7 @@ void main() {
       return http.Response('{"message":"not found"}', 404);
     });
 
-    final apiClient = ApiClient(baseUrl: 'http://localhost:3000', httpClient: client);
+    final apiClient = ApiClient(baseUrl: 'http://localhost:8010', httpClient: client);
     final useCase = DashboardUseCase(
       staffRepository: StaffRepository(apiClient),
       assignmentsRepository: AssignmentsRepository(apiClient),
