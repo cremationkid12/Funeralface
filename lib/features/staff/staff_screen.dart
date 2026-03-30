@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:provider/provider.dart';
 
 class StaffScreen extends StatefulWidget {
@@ -32,6 +33,16 @@ class _StaffScreenState extends State<StaffScreen> {
     await _future;
   }
 
+  Future<void> _openInviteDialog() async {
+    final invited = await showDialog<bool>(
+      context: context,
+      builder: (context) => const _InviteStaffDialog(),
+    );
+    if (invited == true && mounted) {
+      await _refresh();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final token = staffBearerToken();
@@ -41,16 +52,8 @@ class _StaffScreenState extends State<StaffScreen> {
         title: const Text('Staff'),
         actions: [
           IconButton(
-            tooltip: 'Invite (uses backend Supabase config)',
-            onPressed: token == null
-                ? null
-                : () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Invite flow: add dialog + POST /v1/staff/invite in a follow-up.'),
-                      ),
-                    );
-                  },
+            tooltip: 'Invite by email (admin + Supabase)',
+            onPressed: token == null ? null : _openInviteDialog,
             icon: const Icon(Icons.person_add_outlined),
           ),
         ],
@@ -122,6 +125,98 @@ class _StaffScreenState extends State<StaffScreen> {
                 },
               ),
             ),
+    );
+  }
+}
+
+class _InviteStaffDialog extends StatefulWidget {
+  const _InviteStaffDialog();
+
+  @override
+  State<_InviteStaffDialog> createState() => _InviteStaffDialogState();
+}
+
+class _InviteStaffDialogState extends State<_InviteStaffDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  var _submitting = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  bool _looksLikeEmail(String v) {
+    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v.trim());
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final token = staffBearerToken();
+    if (token == null) return;
+    setState(() => _submitting = true);
+    try {
+      await context.read<AppRepositories>().staff.inviteByEmail(
+            email: _email.text,
+            bearerToken: token,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invite sent (check email / Supabase config).')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      final msg = e.statusCode == 403
+          ? 'Forbidden: admin role required to invite.'
+          : e.message;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Invite staff'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            border: OutlineInputBorder(),
+          ),
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return 'Required';
+            if (!_looksLikeEmail(v)) return 'Enter a valid email';
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Send invite'),
+        ),
+      ],
     );
   }
 }
