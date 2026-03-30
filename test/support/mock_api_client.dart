@@ -1,0 +1,39 @@
+import 'package:funeralface_mobile/core/network/api_client.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
+/// Minimal happy-path responses for shell / tab smoke tests.
+http.Client mockStaffAppHttpClient() {
+  return MockClient((request) async {
+    final path = request.url.path;
+    if (path.endsWith('/v1/settings')) {
+      return http.Response(
+        '{"funeral_home_name":"Mock Home","funeral_home_phone":"555","funeral_home_address":"1 Main St","default_message":null}',
+        200,
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    if (path.contains('/v1/staff')) {
+      return http.Response(
+        '{"items":[]}',
+        200,
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    if (path.contains('/v1/assignments')) {
+      return http.Response(
+        '{"items":[]}',
+        200,
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    return http.Response('{"code":"not_found","message":"unmocked"}', 404);
+  });
+}
+
+ApiClient mockStaffAppApiClient() {
+  return ApiClient(
+    baseUrl: 'http://localhost:8010',
+    httpClient: mockStaffAppHttpClient(),
+  );
+}
