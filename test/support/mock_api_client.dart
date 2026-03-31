@@ -31,6 +31,33 @@ http.Client mockStaffAppHttpClient() {
   });
 }
 
+http.Client mockStaffAppHttpClientWithAssignmentList() {
+  return MockClient((request) async {
+    final path = request.url.path;
+    if (path.endsWith('/v1/settings')) {
+      return http.Response(
+        '{"funeral_home_name":"Mock Home","funeral_home_phone":"555","funeral_home_address":"1 Main St","default_message":null}',
+        200,
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    if (path.contains('/v1/staff')) {
+      return http.Response('{"items":[]}', 200, headers: {'Content-Type': 'application/json'});
+    }
+    if (path == '/v1/assignments') {
+      return http.Response(
+        '{"items":[{\"id\":\"asgn-1\",\"decedent_name\":\"John Doe\",\"pickup_address\":\"123 Main\",\"contact_name\":\"Jane\",\"contact_phone\":\"555\" ,\"status\":\"pending\",\"notes\":\"\"}]}',
+        200,
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    if (path == '/v1/assignments/asgn-1') {
+      return http.Response('{"id":"asgn-1","status":"pending"}', 200, headers: {'Content-Type': 'application/json'});
+    }
+    return http.Response('{"code":"not_found","message":"unmocked"}', 404);
+  });
+}
+
 ApiClient mockStaffAppApiClient() {
   return ApiClient(
     baseUrl: 'http://localhost:8010',

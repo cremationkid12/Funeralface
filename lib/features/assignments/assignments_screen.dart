@@ -4,6 +4,7 @@ import 'package:funeralface_mobile/app/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_repository.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 class AssignmentsScreen extends StatefulWidget {
   const AssignmentsScreen({super.key});
@@ -148,6 +149,11 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                       final name = m['decedent_name']?.toString() ?? '—';
                       final status = m['status']?.toString() ?? '—';
                       return ListTile(
+                        onTap: id.isEmpty
+                            ? null
+                            : () async {
+                                await context.push('/assignments/$id', extra: m);
+                              },
                         title: Text(name),
                         subtitle: Text(
                           '${m['pickup_address']?.toString() ?? ''}\nContact: ${m['contact_name']?.toString() ?? '-'} (${m['contact_phone']?.toString() ?? '-'})',

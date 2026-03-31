@@ -1,4 +1,5 @@
 import 'package:funeralface_mobile/features/assignments/assignments_screen.dart';
+import 'package:funeralface_mobile/features/assignments/assignment_detail_screen.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_screen.dart';
 import 'package:funeralface_mobile/features/settings/settings_screen.dart';
 import 'package:funeralface_mobile/features/staff/staff_screen.dart';
@@ -34,6 +35,18 @@ GoRouter createAppRouter() {
                 pageBuilder: (context, state) => const NoTransitionPage<void>(
                   child: AssignmentsScreen(),
                 ),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    name: 'assignment_detail',
+                    builder: (context, state) {
+                      final extra = state.extra;
+                      final map = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
+                      final id = state.pathParameters['id'] ?? '';
+                      return AssignmentDetailScreen(assignmentId: id, initial: map);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
