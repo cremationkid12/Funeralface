@@ -1,17 +1,27 @@
 import 'package:funeralface_mobile/features/assignments/assignments_screen.dart';
 import 'package:funeralface_mobile/features/assignments/assignment_detail_screen.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_screen.dart';
+import 'package:funeralface_mobile/features/family/family_assignment_screen.dart';
 import 'package:funeralface_mobile/features/settings/settings_screen.dart';
 import 'package:funeralface_mobile/features/staff/staff_detail_screen.dart';
 import 'package:funeralface_mobile/features/staff/staff_screen.dart';
 import 'package:funeralface_mobile/shell/main_shell.dart';
 import 'package:go_router/go_router.dart';
 
-/// Staff app routes (P4.1 routing baseline; P5 extends with family token route).
-GoRouter createAppRouter() {
+/// Staff shell routes + family deep-link route (`/family/:token`).
+GoRouter createAppRouter({String initialLocation = '/dashboard'}) {
   return GoRouter(
-    initialLocation: '/dashboard',
+    initialLocation: initialLocation,
     routes: [
+      GoRoute(
+        path: '/family/:token',
+        name: 'family_by_token',
+        builder: (context, state) {
+          final encoded = state.pathParameters['token'] ?? '';
+          final token = Uri.decodeComponent(encoded);
+          return FamilyAssignmentScreen(token: token);
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return MainShell(navigationShell: navigationShell);
