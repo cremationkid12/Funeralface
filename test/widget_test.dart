@@ -59,4 +59,33 @@ void main() {
     expect(find.text('Assignment'), findsOneWidget);
     expect(find.text('Decedent name'), findsOneWidget);
   });
+
+  testWidgets('Staff list can navigate to detail screen', (WidgetTester tester) async {
+    final api = ApiClient(
+      baseUrl: 'http://localhost:8010',
+      httpClient: mockStaffAppHttpClientWithStaffList(),
+    );
+    final router = createAppRouter();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider.value(value: api),
+          Provider.value(value: AppRepositories(apiClient: api)),
+        ],
+        child: FuneralfaceApp(routerConfig: router),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Staff'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Jane Staff'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Staff member'), findsOneWidget);
+    expect(find.text('Name'), findsOneWidget);
+  });
 }
