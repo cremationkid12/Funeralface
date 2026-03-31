@@ -21,3 +21,12 @@ Copy `.env.example` to `.env` for local reference only; Dart does not load `.env
 - **Routing:** `go_router` with a `StatefulShellRoute` tab shell (`lib/app/router/app_router.dart`, `lib/shell/main_shell.dart`).
 - **DI:** `provider` + `AppRepositories` (`lib/app/app_repositories.dart`).
 - **Staff tabs:** Dashboard, Assignments, Staff, Settings under `lib/features/`.
+
+## Family deep links (P5 / P6.5)
+
+- In-app path: **`/family/<token>`** (see `FamilyAssignmentScreen` and `extractFamilyAssignmentToken` in `lib/core/deeplink/deeplink_parser.dart`).
+- **Android:** `AndroidManifest.xml` includes a `VIEW` intent-filter with `https`, host **`links.funeralface.app`**, and `pathPrefix` **`/family/`**. Replace that host with your verified domain and complete [Digital Asset Links](https://developer.android.com/training/app-links) before production.
+- **iOS:** add Associated Domains + `apple-app-site-association` for the same paths (not generated in this repo).
+
+Manual check: `flutter run --flavor dev ...` then open
+`http://localhost:<port>/family/<token>` is not available from the browser; use `adb shell am start -a android.intent.action.VIEW -d "https://links.funeralface.app/family/<token>"` after updating the host to match your manifest.

@@ -88,4 +88,27 @@ void main() {
     expect(find.text('Staff member'), findsOneWidget);
     expect(find.text('Name'), findsOneWidget);
   });
+
+  testWidgets('Family deep link route loads public assignment', (WidgetTester tester) async {
+    final api = ApiClient(
+      baseUrl: 'http://localhost:8010',
+      httpClient: mockFamilyTokenHttpClient(),
+    );
+    final router = createAppRouter(initialLocation: '/family/tok-1');
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider.value(value: api),
+          Provider.value(value: AppRepositories(apiClient: api)),
+        ],
+        child: FuneralfaceApp(routerConfig: router),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Service status'), findsOneWidget);
+    expect(find.textContaining('en route'), findsWidgets);
+  });
 }
