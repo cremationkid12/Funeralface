@@ -25,8 +25,10 @@ Copy `.env.example` to `.env` for local reference only; Dart does not load `.env
 ## Family deep links (P5 / P6.5)
 
 - In-app path: **`/family/<token>`** (see `FamilyAssignmentScreen` and `extractFamilyAssignmentToken` in `lib/core/deeplink/deeplink_parser.dart`).
+- Parser is strict by default: exact host match (when configured), only `/family/<token>`, and token-format validation; legacy `?token=` fallback is opt-in (`allowQueryFallback: true`).
 - **Android:** `AndroidManifest.xml` includes a `VIEW` intent-filter with `https`, host **`links.funeralface.app`**, and `pathPrefix` **`/family/`**. Replace that host with your verified domain and complete [Digital Asset Links](https://developer.android.com/training/app-links) before production.
-- **iOS:** add Associated Domains + `apple-app-site-association` for the same paths (not generated in this repo).
+- **iOS:** `Runner.entitlements` now includes Associated Domains scaffold for `applinks:links.funeralface.app`. Replace host and publish `apple-app-site-association` before production.
+- Runtime link ingestion is wired through `app_links` in `main.dart` and routes matching links to `/family/<token>` only.
 
 Manual check: `flutter run --flavor dev ...` then open
 `http://localhost:<port>/family/<token>` is not available from the browser; use `adb shell am start -a android.intent.action.VIEW -d "https://links.funeralface.app/family/<token>"` after updating the host to match your manifest.
