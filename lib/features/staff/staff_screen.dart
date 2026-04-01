@@ -329,7 +329,7 @@ class _CreateStaffDialogState extends State<_CreateStaffDialog> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _role,
+                  initialValue: _role,
                   decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
                   items: StaffRepository.roles
                       .map((r) => DropdownMenuItem<String>(value: r, child: Text(r)))
