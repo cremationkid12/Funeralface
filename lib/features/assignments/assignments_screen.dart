@@ -63,8 +63,8 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
             payload: {'status': status},
             bearerToken: token,
           );
-      if (!mounted) return;
       await _refresh();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Assignment status updated to $status')),
       );
