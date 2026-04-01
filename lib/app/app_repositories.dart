@@ -1,6 +1,7 @@
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_repository.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_usecase.dart';
+import 'package:funeralface_mobile/features/family/family_assignment_repository.dart';
 import 'package:funeralface_mobile/features/settings/settings_repository.dart';
 import 'package:funeralface_mobile/features/staff/staff_repository.dart';
 
@@ -13,6 +14,9 @@ class AppRepositories {
   late final SettingsRepository settings = SettingsRepository(_api);
   late final StaffRepository staff = StaffRepository(_api);
   late final AssignmentsRepository assignments = AssignmentsRepository(_api);
+
+  /// Public family token flow (no bearer auth).
+  late final FamilyAssignmentRepository familyAssignments = FamilyAssignmentRepository(_api);
 
   late final DashboardUseCase dashboard = DashboardUseCase(
     staffRepository: staff,

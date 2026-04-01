@@ -12,9 +12,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _address = TextEditingController();
+  final _logoUrl = TextEditingController();
   final _defaultMessage = TextEditingController();
 
   var _loading = true;
@@ -27,8 +29,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _name.dispose();
     _phone.dispose();
     _address.dispose();
+    _logoUrl.dispose();
     _defaultMessage.dispose();
     super.dispose();
+  }
+
+  String? _validateHttpUrl(String? v) {
+    final t = v?.trim() ?? '';
+    if (t.isEmpty) return null;
+    final u = Uri.tryParse(t);
+    if (u == null || !u.hasScheme || (u.scheme != 'https' && u.scheme != 'http')) {
+      return 'Enter a valid http(s) URL';
+    }
+    return null;
   }
 
   Future<void> _load() async {
@@ -52,6 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _name.text = data['funeral_home_name']?.toString() ?? '';
         _phone.text = data['funeral_home_phone']?.toString() ?? '';
         _address.text = data['funeral_home_address']?.toString() ?? '';
+        _logoUrl.text = data['logo_url']?.toString() ?? '';
         _defaultMessage.text = data['default_message']?.toString() ?? '';
         _loading = false;
       });
@@ -65,6 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     final token = staffBearerToken();
     if (token == null) return;
     setState(() => _saving = true);
@@ -75,7 +90,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'funeral_home_name': _name.text.trim(),
           'funeral_home_phone': _phone.text.trim(),
           'funeral_home_address': _address.text.trim(),
-          if (_defaultMessage.text.trim().isNotEmpty) 'default_message': _defaultMessage.text.trim(),
+          'logo_url': _logoUrl.text.trim().isEmpty ? null : _logoUrl.text.trim(),
+          'default_message': _defaultMessage.text.trim().isEmpty ? null : _defaultMessage.text.trim(),
         },
         bearerToken: token,
       );
@@ -153,45 +169,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                     )
-                  : ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        TextField(
-                          controller: _name,
-                          decoration: const InputDecoration(
-                            labelText: 'Funeral home name',
-                            border: OutlineInputBorder(),
+                  : Form(
+                      key: _formKey,
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          TextFormField(
+                            controller: _name,
+                            decoration: const InputDecoration(
+                              labelText: 'Funeral home name',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            onChanged: (_) => setState(() {}),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _phone,
-                          decoration: const InputDecoration(
-                            labelText: 'Phone',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.phone,
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            onChanged: (_) => setState(() {}),
                           ),
-                          keyboardType: TextInputType.phone,
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _address,
-                          decoration: const InputDecoration(
-                            labelText: 'Address',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _address,
+                            decoration: const InputDecoration(
+                              labelText: 'Address',
+                              border: OutlineInputBorder(),
+                            ),
+                            maxLines: 2,
+                            validator: (v) =>
+                                (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            onChanged: (_) => setState(() {}),
                           ),
-                          maxLines: 2,
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _defaultMessage,
-                          decoration: const InputDecoration(
-                            labelText: 'Default family message (optional)',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _logoUrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Logo URL (optional)',
+                              hintText: 'https://…',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.url,
+                            validator: _validateHttpUrl,
+                            onChanged: (_) => setState(() {}),
                           ),
-                          maxLines: 3,
-                        ),
-                      ],
+                          if (_logoUrl.text.trim().isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _LogoPreviewCard(url: _logoUrl.text.trim()),
+                          ],
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _defaultMessage,
+                            decoration: const InputDecoration(
+                              labelText: 'Default family message (optional)',
+                              border: OutlineInputBorder(),
+                            ),
+                            maxLines: 3,
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ],
+                      ),
                     ),
+    );
+  }
+}
+
+class _LogoPreviewCard extends StatelessWidget {
+  const _LogoPreviewCard({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Logo preview', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                url,
+                height: 96,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.error),
+                      const SizedBox(width: 12),
+                      const Expanded(child: Text('Could not load image')),
+                    ],
+                  ),
+                ),
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const SizedBox(height: 96, child: Center(child: CircularProgressIndicator()));
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
