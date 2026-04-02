@@ -35,13 +35,16 @@ android {
         create("dev") {
             dimension = "environment"
             applicationIdSuffix = ".dev"
+            manifestPlaceholders["DEEPLINK_HOST"] = "links.funeralface.app"
         }
         create("staging") {
             dimension = "environment"
             applicationIdSuffix = ".staging"
+            manifestPlaceholders["DEEPLINK_HOST"] = "links.funeralface.app"
         }
         create("prod") {
             dimension = "environment"
+            manifestPlaceholders["DEEPLINK_HOST"] = "links.funeralface.app"
         }
     }
 

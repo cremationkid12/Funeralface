@@ -29,6 +29,12 @@ Copy `.env.example` to `.env` for local reference only; Dart does not load `.env
 - **Android:** `AndroidManifest.xml` includes a `VIEW` intent-filter with `https`, host **`links.funeralface.app`**, and `pathPrefix` **`/family/`**. Replace that host with your verified domain and complete [Digital Asset Links](https://developer.android.com/training/app-links) before production.
 - **iOS:** `Runner.entitlements` now includes Associated Domains scaffold for `applinks:links.funeralface.app`. Replace host and publish `apple-app-site-association` before production.
 - Runtime link ingestion is wired through `app_links` in `main.dart` and routes matching links to `/family/<token>` only.
+- Android host is configured via `DEEPLINK_HOST` manifest placeholder in `android/app/build.gradle.kts`.
 
 Manual check: `flutter run --flavor dev ...` then open
 `http://localhost:<port>/family/<token>` is not available from the browser; use `adb shell am start -a android.intent.action.VIEW -d "https://links.funeralface.app/family/<token>"` after updating the host to match your manifest.
+
+P5.1 verification checklist + hosting templates:
+- `doc/p5-deeplink-verification.md`
+- `doc/templates/assetlinks.json.example`
+- `doc/templates/apple-app-site-association.example`
