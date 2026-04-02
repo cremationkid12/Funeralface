@@ -19,6 +19,19 @@ class AppEnv {
     defaultValue: 'localhost',
   );
 
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: '',
+  );
+
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
+
+  static bool get hasSupabaseAuthConfig =>
+      supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;
+
   /// Temporary dev-only auth token for protected endpoints.
   /// Pass with:
   /// --dart-define=DEV_AUTH_BEARER_TOKEN=your-jwt-token
