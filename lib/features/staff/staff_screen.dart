@@ -14,35 +14,81 @@ class StaffScreen extends StatefulWidget {
 }
 
 class _StaffScreenState extends State<StaffScreen> {
-  Future<List<dynamic>>? _future;
+  List<dynamic> _items = const [];
+  bool _loading = true;
+  Object? _error;
   var _depsReady = false;
+  String? _lastToken;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final token = staffBearerToken();
     if (!_depsReady) {
       _depsReady = true;
-      _future = _load();
+      _lastToken = token;
+      _load();
+      return;
+    }
+    if (token != _lastToken) {
+      _lastToken = token;
+      _load();
     }
   }
 
-  Future<List<dynamic>> _load() {
-    return context.read<AppRepositories>().staff.listStaff(bearerToken: staffBearerToken());
+  Future<void> _load() async {
+    final token = staffBearerToken();
+    if (token == null) {
+      if (!mounted) return;
+      setState(() {
+        _items = const [];
+        _loading = false;
+        _error = null;
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final items = await context.read<AppRepositories>().staff.listStaff(bearerToken: token);
+      if (!mounted) return;
+      setState(() {
+        _items = items;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _refresh() async {
-    setState(() {
-      _future = _load();
-    });
-    await _future;
+    await _load();
   }
 
   Future<void> _openCreateDialog() async {
-    final created = await showDialog<bool>(
+    final created = await showDialog<Map<String, dynamic>? >(
       context: context,
       builder: (context) => const _CreateStaffDialog(),
     );
-    if (created == true && mounted) await _refresh();
+    if (created == null || !mounted) return;
+    // Some mocks/backends may return only `id` for create; in that case,
+    // fall back to refresh so the list has full row fields.
+    final hasRequiredFields = created['name'] != null && created['phone'] != null;
+    if (!hasRequiredFields) {
+      await _refresh();
+      return;
+    }
+
+    setState(() => _items = [created, ..._items]);
   }
 
   Future<void> _openInviteDialog() async {
@@ -86,69 +132,89 @@ class _StaffScreenState extends State<StaffScreen> {
             )
           : RefreshIndicator(
               onRefresh: _refresh,
-              child: FutureBuilder<List<dynamic>>(
-                future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(snapshot.error.toString()),
-                              const SizedBox(height: 16),
-                              FilledButton.tonal(onPressed: _refresh, child: const Text('Retry')),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  final items = snapshot.data ?? const [];
-                  if (items.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 120),
-                        Center(child: Text('No staff yet')),
-                      ],
-                    );
-                  }
-                  return ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final m = items[i] as Map<String, dynamic>;
-                      final id = m['id']?.toString() ?? '';
-                      final name = m['name']?.toString() ?? '—';
-                      final phone = m['phone']?.toString() ?? '';
-                      final role = m['role']?.toString() ?? '';
-                      return ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.person)),
-                        title: Text(name),
-                        subtitle: Text(phone),
-                        trailing: role.isEmpty ? null : Chip(label: Text(role, style: const TextStyle(fontSize: 11))),
-                        onTap: id.isEmpty
-                            ? null
-                            : () async {
-                                final removed = await context.push<bool>('/staff/$id', extra: m);
-                                if (removed == true && mounted) await _refresh();
+              child: _loading
+                  ? ListView(
+                      physics: AlwaysScrollableScrollPhysics(),
+                      children: [SizedBox(height: 120), Center(child: CircularProgressIndicator())],
+                    )
+                  : _error != null
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _friendlyErrorText(context, _error),
+                                  const SizedBox(height: 16),
+                                  FilledButton.tonal(onPressed: _refresh, child: const Text('Retry')),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : _items.isEmpty
+                          ? ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: const [
+                                SizedBox(height: 120),
+                                Center(child: Text('No staff yet')),
+                              ],
+                            )
+                          : ListView.separated(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: _items.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (context, i) {
+                                final m = _items[i] as Map<String, dynamic>;
+                                final id = m['id']?.toString() ?? '';
+                                final name = m['name']?.toString() ?? '—';
+                                final phone = m['phone']?.toString() ?? '';
+                                final role = m['role']?.toString() ?? '';
+                                return ListTile(
+                                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                                  title: Text(name),
+                                  subtitle: Text(phone),
+                                  trailing: role.isEmpty ? null : Chip(label: Text(role, style: const TextStyle(fontSize: 11))),
+                                  onTap: id.isEmpty
+                                      ? null
+                                      : () async {
+                                          final result = await context.push<Map<String, dynamic>>('/staff/$id', extra: m);
+                                          if (result == null || !mounted) return;
+                                          if (result['deleted'] == true) {
+                                            _items = _items.where((it) => it['id']?.toString() != id).toList();
+                                            setState(() {});
+                                            return;
+                                          }
+                                          final hasRequiredFields = result['name'] != null && result['phone'] != null;
+                                          if (!hasRequiredFields) {
+                                            await _refresh();
+                                            return;
+                                          }
+                                          final idx = _items.indexWhere((it) => it['id']?.toString() == id);
+                                          if (idx >= 0) {
+                                            _items[idx] = result;
+                                          } else {
+                                            _items = [result, ..._items];
+                                          }
+                                          setState(() {});
+                                        },
+                                );
                               },
-                      );
-                    },
-                  );
-                },
-              ),
+                            ),
             ),
     );
   }
+}
+
+Widget _friendlyErrorText(BuildContext context, Object? error) {
+  if (error is ApiException) {
+    if (error.statusCode == 403) {
+      return const Text('Admin role required to manage staff.');
+    }
+  }
+  return Text(error.toString());
 }
 
 class _InviteStaffDialog extends StatefulWidget {
@@ -279,12 +345,12 @@ class _CreateStaffDialogState extends State<_CreateStaffDialog> {
       };
       final e = _email.text.trim();
       if (e.isNotEmpty) payload['email'] = e;
-      await context.read<AppRepositories>().staff.createStaff(
+      final created = await context.read<AppRepositories>().staff.createStaff(
             payload: payload,
             bearerToken: token,
           );
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop(created);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Staff member created')));
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -343,7 +409,7 @@ class _CreateStaffDialogState extends State<_CreateStaffDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(null),
           child: const Text('Cancel'),
         ),
         FilledButton(
