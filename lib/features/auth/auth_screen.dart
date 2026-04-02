@@ -20,6 +20,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   final _registerConfirm = TextEditingController();
   bool _busy = false;
   String? _error;
+  String? _info;
 
   SupabaseAuthService get _auth => SupabaseAuthService(Supabase.instance.client);
 
@@ -38,6 +39,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
       await _auth.login(
@@ -65,6 +67,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
       await _auth.register(
@@ -73,6 +76,56 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       );
       if (!mounted) return;
       context.go('/dashboard');
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openRecoverDialog() async {
+    final emailController = TextEditingController(text: _loginEmail.text.trim());
+    final email = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset password'),
+        content: TextField(
+          controller: emailController,
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.emailAddress,
+          autofillHints: const [AutofillHints.email],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(emailController.text.trim()),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || email == null || email.isEmpty) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    try {
+      await _auth.recoverPassword(email: email);
+      if (!mounted) return;
+      setState(() {
+        _info = 'Password reset email sent if the account exists.';
+      });
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -120,6 +173,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
+          if (_info != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(_info!, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            ),
           SizedBox(
             height: 320,
             child: TabBarView(
@@ -132,6 +190,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                   submitLabel: 'Login',
                   onSubmit: _doLogin,
                   includeConfirm: false,
+                  onForgotPassword: _openRecoverDialog,
                 ),
                 _AuthForm(
                   emailController: _registerEmail,
@@ -160,6 +219,7 @@ class _AuthForm extends StatelessWidget {
     required this.submitLabel,
     required this.onSubmit,
     required this.includeConfirm,
+    this.onForgotPassword,
   });
 
   final TextEditingController emailController;
@@ -169,6 +229,7 @@ class _AuthForm extends StatelessWidget {
   final String submitLabel;
   final VoidCallback onSubmit;
   final bool includeConfirm;
+  final VoidCallback? onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -199,6 +260,13 @@ class _AuthForm extends StatelessWidget {
           onPressed: busy ? null : onSubmit,
           child: busy ? const Text('Please wait...') : Text(submitLabel),
         ),
+        if (!includeConfirm) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: busy ? null : onForgotPassword,
+            child: const Text('Forgot password?'),
+          ),
+        ],
       ],
     );
   }
