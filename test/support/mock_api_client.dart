@@ -164,6 +164,30 @@ http.Client mockStaffAppHttpClientWithStaffList() {
   });
 }
 
+http.Client mockStaffAppHttpClientWithStaffListForbidden() {
+  return MockClient((request) async {
+    final path = request.url.path;
+    if (path.endsWith('/v1/settings')) {
+      return http.Response(
+        '{"funeral_home_name":"Mock Home","funeral_home_phone":"555","funeral_home_address":"1 Main St","default_message":null}',
+        200,
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    if (path == '/v1/staff') {
+      return http.Response(
+        '{"code":"forbidden","message":"Forbidden."}',
+        403,
+        headers: {'Content-Type': 'application/json'},
+      );
+    }
+    if (path.contains('/v1/assignments')) {
+      return http.Response('{"items":[]}', 200, headers: {'Content-Type': 'application/json'});
+    }
+    return http.Response('{"code":"not_found","message":"unmocked"}', 404);
+  });
+}
+
 /// Mutable staff API mock for widget interaction tests.
 http.Client mockStaffCrudHttpClient() {
   final items = <Map<String, dynamic>>[
