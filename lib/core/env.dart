@@ -16,7 +16,7 @@ class AppEnv {
 
   static const String deeplinkHost = String.fromEnvironment(
     'DEEPLINK_HOST',
-    defaultValue: 'localhost',
+    defaultValue: 'links.funeralface.app',
   );
 
   /// Temporary dev-only auth token for protected endpoints.
