@@ -44,4 +44,8 @@ class SupabaseAuthService {
     await _client.auth.signOut();
     AuthSession.instance.clear();
   }
+
+  Future<void> recoverPassword({required String email}) async {
+    await _client.auth.resetPasswordForEmail(email.trim());
+  }
 }
