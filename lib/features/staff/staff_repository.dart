@@ -31,6 +31,22 @@ class StaffRepository {
     return _apiClient.delete('/v1/staff/$id', bearerToken: bearerToken);
   }
 
+  Future<Map<String, dynamic>> activateStaff({required String id, String? bearerToken}) {
+    return _apiClient.postJson(
+      '/v1/staff/$id/activate',
+      body: const <String, dynamic>{},
+      bearerToken: bearerToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> deactivateStaff({required String id, String? bearerToken}) {
+    return _apiClient.postJson(
+      '/v1/staff/$id/deactivate',
+      body: const <String, dynamic>{},
+      bearerToken: bearerToken,
+    );
+  }
+
   /// Requires admin JWT; backend sends Supabase invite email.
   Future<Map<String, dynamic>> inviteByEmail({
     required String email,
