@@ -254,6 +254,30 @@ void main() {
     expect(find.textContaining('Invite sent'), findsOneWidget);
   });
 
+  testWidgets('Staff screen shows admin-required message on 403', (WidgetTester tester) async {
+    final api = ApiClient(
+      baseUrl: 'http://localhost:8010',
+      httpClient: mockStaffAppHttpClientWithStaffListForbidden(),
+    );
+    final router = createAppRouter();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider.value(value: api),
+          Provider.value(value: AppRepositories(apiClient: api)),
+        ],
+        child: FuneralfaceApp(routerConfig: router),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Staff').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Admin role required to manage staff.'), findsOneWidget);
+  });
+
   testWidgets('Family deep link route loads public assignment', (WidgetTester tester) async {
     final api = ApiClient(
       baseUrl: 'http://localhost:8010',
