@@ -24,6 +24,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   late final TextEditingController _phone;
   late final TextEditingController _email;
   String _role = 'user';
+  late bool _active;
   var _busy = false;
 
   @override
@@ -34,6 +35,9 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
     _email = TextEditingController(text: widget.initial['email']?.toString() ?? '');
     final r = widget.initial['role']?.toString();
     _role = r != null && StaffRepository.roles.contains(r) ? r : 'user';
+    final a = widget.initial['active'];
+    final aStr = a?.toString().toLowerCase();
+    _active = a is bool ? a : (aStr == 'false' ? false : true);
   }
 
   @override
@@ -53,6 +57,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
         'name': _name.text.trim(),
         'phone': _phone.text.trim(),
         'role': _role,
+        'active': _active,
         'email': _email.text.trim().isEmpty ? null : _email.text.trim(),
       };
       await context.read<AppRepositories>().staff.updateStaff(
@@ -62,6 +67,57 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Staff member saved')));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _toggleActive(bool next) async {
+    final token = staffBearerToken();
+    if (token == null) return;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(next ? 'Activate staff member?' : 'Deactivate staff member?'),
+        content: const Text('This change will be recorded in audit logs (admin-only).'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(next ? 'Activate' : 'Deactivate'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      if (next) {
+        await context.read<AppRepositories>().staff.activateStaff(
+              id: widget.staffId,
+              bearerToken: token,
+            );
+      } else {
+        await context.read<AppRepositories>().staff.deactivateStaff(
+              id: widget.staffId,
+              bearerToken: token,
+            );
+      }
+
+      if (!mounted) return;
+      setState(() => _active = next);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(next ? 'Staff activated' : 'Staff deactivated')),
+      );
+      Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -182,6 +238,12 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                       : (v) {
                           if (v != null) setState(() => _role = v);
                         },
+                ),
+                SwitchListTile(
+                  title: const Text('Active'),
+                  subtitle: Text(_active ? 'Enabled' : 'Disabled'),
+                  value: _active,
+                  onChanged: _busy ? null : (v) => _toggleActive(v),
                 ),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
