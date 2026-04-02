@@ -32,16 +32,6 @@ class AppEnv {
   static bool get hasSupabaseAuthConfig =>
       supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;
 
-  /// Temporary dev-only auth token for protected endpoints.
-  /// Pass with:
-  /// --dart-define=DEV_AUTH_BEARER_TOKEN=your-jwt-token
-  static const String devAuthBearerToken = String.fromEnvironment(
-    'DEV_AUTH_BEARER_TOKEN',
-    defaultValue: '',
-  );
-
-  static bool get hasDevAuthBearerToken => devAuthBearerToken.trim().isNotEmpty;
-
   static String get flavor {
     switch (appEnv.toLowerCase()) {
       case 'production':

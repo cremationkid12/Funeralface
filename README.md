@@ -7,7 +7,7 @@ Funeralface mobile app (Flutter).
 Flutter reads config via `--dart-define` (see `lib/core/env.dart`). Example:
 
 ```bash
-flutter run --flavor dev --dart-define=API_BASE_URL=http://10.0.2.2:8010 --dart-define=APP_ENV=development --dart-define=DEV_AUTH_BEARER_TOKEN=<jwt>
+flutter run --flavor dev --dart-define=API_BASE_URL=http://10.0.2.2:8010 --dart-define=APP_ENV=development
 ```
 
 Supabase auth mode (register/login pages + session restore):

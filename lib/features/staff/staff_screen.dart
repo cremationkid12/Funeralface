@@ -78,7 +78,7 @@ class _StaffScreenState extends State<StaffScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Add DEV_AUTH_BEARER_TOKEN to list staff.',
+                  'Please sign in to load staff.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),

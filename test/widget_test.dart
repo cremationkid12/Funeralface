@@ -3,12 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/app/funeralface_app.dart';
 import 'package:funeralface_mobile/app/router/app_router.dart';
+import 'package:funeralface_mobile/app/session/auth_session.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:provider/provider.dart';
 
 import 'support/mock_api_client.dart';
 
 void main() {
+  setUp(() {
+    // Ticket 5 removes the DEV_AUTH_BEARER_TOKEN fallback; widget tests must
+    // provide an authenticated session for protected staff screens.
+    AuthSession.instance.setSession(accessToken: 'test-access-token', userId: 'user-1');
+  });
+
+  tearDown(() {
+    AuthSession.instance.clear();
+  });
+
   testWidgets('App boots with bottom navigation shell', (WidgetTester tester) async {
     final api = mockStaffAppApiClient();
     final router = createAppRouter();
