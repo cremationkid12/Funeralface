@@ -147,7 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Add DEV_AUTH_BEARER_TOKEN to load and edit funeral home settings.',
+                  'Please sign in to load and edit settings.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),

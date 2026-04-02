@@ -133,7 +133,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Add DEV_AUTH_BEARER_TOKEN to edit staff.',
+                  'Please sign in to edit staff.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),

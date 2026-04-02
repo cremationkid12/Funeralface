@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:funeralface_mobile/core/env.dart';
 import 'package:go_router/go_router.dart';
 
 class MainShell extends StatelessWidget {
@@ -13,7 +12,6 @@ class MainShell extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (!AppEnv.hasDevAuthBearerToken) const _DevAuthHint(),
           Expanded(child: navigationShell),
         ],
       ),
@@ -42,35 +40,6 @@ class MainShell extends StatelessWidget {
             label: 'Settings',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DevAuthHint extends StatelessWidget {
-  const _DevAuthHint();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, size: 20, color: scheme.onSecondaryContainer),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Dev: pass --dart-define=DEV_AUTH_BEARER_TOKEN=… to load staff data.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSecondaryContainer,
-                    ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

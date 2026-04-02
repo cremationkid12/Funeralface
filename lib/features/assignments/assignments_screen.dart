@@ -99,7 +99,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Add DEV_AUTH_BEARER_TOKEN to list assignments.',
+                  'Please sign in to load assignments.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),

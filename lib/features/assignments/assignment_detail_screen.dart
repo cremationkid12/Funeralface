@@ -126,7 +126,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Add DEV_AUTH_BEARER_TOKEN to view and edit assignment details.',
+                  'Please sign in to view and edit assignment details.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),

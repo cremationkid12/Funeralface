@@ -1,11 +1,9 @@
-import 'package:funeralface_mobile/core/env.dart';
 import 'auth_session.dart';
 
 /// Bearer token for authenticated staff API calls.
-/// Dev: [AppEnv.devAuthBearerToken] via `--dart-define`.
-/// Production: replace with secure storage + login flow (later phase).
+///
+/// Ticket 5 removes the temporary `DEV_AUTH_BEARER_TOKEN` dev-JWT fallback:
+/// mobile must rely on the Supabase-backed `AuthSession`.
 String? staffBearerToken() {
-  final dev = AppEnv.devAuthBearerToken.trim();
-  if (dev.isNotEmpty) return dev;
   return AuthSession.instance.accessToken;
 }
