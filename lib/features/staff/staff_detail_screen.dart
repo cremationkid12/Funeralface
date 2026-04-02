@@ -60,13 +60,14 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
         'active': _active,
         'email': _email.text.trim().isEmpty ? null : _email.text.trim(),
       };
-      await context.read<AppRepositories>().staff.updateStaff(
+      final updated = await context.read<AppRepositories>().staff.updateStaff(
             id: widget.staffId,
             payload: payload,
             bearerToken: token,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Staff member saved')));
+      Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -101,23 +102,29 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
     setState(() => _busy = true);
     try {
       if (next) {
-        await context.read<AppRepositories>().staff.activateStaff(
+        final updated = await context.read<AppRepositories>().staff.activateStaff(
               id: widget.staffId,
               bearerToken: token,
             );
+        if (!mounted) return;
+        setState(() => _active = next);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next ? 'Staff activated' : 'Staff deactivated')),
+        );
+        Navigator.of(context).pop(updated);
       } else {
-        await context.read<AppRepositories>().staff.deactivateStaff(
+        final updated = await context.read<AppRepositories>().staff.deactivateStaff(
               id: widget.staffId,
               bearerToken: token,
             );
+        if (!mounted) return;
+        setState(() => _active = next);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next ? 'Staff activated' : 'Staff deactivated')),
+        );
+        Navigator.of(context).pop(updated);
       }
 
-      if (!mounted) return;
-      setState(() => _active = next);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(next ? 'Staff activated' : 'Staff deactivated')),
-      );
-      Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
@@ -155,7 +162,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
     try {
       await context.read<AppRepositories>().staff.deleteStaff(id: widget.staffId, bearerToken: token);
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop({'deleted': true, 'id': widget.staffId});
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Staff member removed')));
     } on ApiException catch (e) {
       if (!mounted) return;
