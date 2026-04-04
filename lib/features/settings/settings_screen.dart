@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
+import 'package:funeralface_mobile/features/auth/supabase_auth_service.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   var _loading = true;
   String? _error;
   var _saving = false;
+  var _signOutBusy = false;
   var _scheduledLoad = false;
 
   @override
@@ -108,6 +113,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _signOut() async {
+    if (!AppEnv.hasSupabaseAuthConfig) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign out'),
+        content: const Text('You will need to sign in again to use staff features.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Sign out')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _signOutBusy = true);
+    try {
+      await SupabaseAuthService(Supabase.instance.client).logout();
+      if (!mounted) return;
+      context.go('/auth');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _signOutBusy = false);
+    }
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -165,6 +197,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Text(_error!, textAlign: TextAlign.center),
                             const SizedBox(height: 16),
                             FilledButton.tonal(onPressed: _load, child: const Text('Retry')),
+                            if (AppEnv.hasSupabaseAuthConfig) ...[
+                              const SizedBox(height: 24),
+                              TextButton(
+                                onPressed: _signOutBusy ? null : _signOut,
+                                child: _signOutBusy
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Text('Sign out'),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -234,6 +279,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             maxLines: 3,
                             onChanged: (_) => setState(() {}),
                           ),
+                          if (AppEnv.hasSupabaseAuthConfig) ...[
+                            const SizedBox(height: 32),
+                            OutlinedButton(
+                              onPressed: (_saving || _signOutBusy) ? null : _signOut,
+                              child: _signOutBusy
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Text('Sign out'),
+                            ),
+                          ],
                         ],
                       ),
                     ),

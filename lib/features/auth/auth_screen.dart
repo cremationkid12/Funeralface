@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:funeralface_mobile/app/session/auth_session.dart';
 import 'package:funeralface_mobile/core/env.dart';
+import 'package:funeralface_mobile/core/network/api_client.dart';
+import 'package:funeralface_mobile/features/auth/backend_provision.dart';
 import 'package:funeralface_mobile/features/auth/supabase_auth_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -47,6 +51,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         password: _loginPassword.text,
       );
       if (!mounted) return;
+      final token = AuthSession.instance.accessToken;
+      if (token != null && token.isNotEmpty) {
+        await ensureBackendProvisioned(context.read<ApiClient>(), token);
+      }
+      if (!mounted) return;
       context.go('/dashboard');
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -74,6 +83,11 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         email: _registerEmail.text.trim(),
         password: _registerPassword.text,
       );
+      if (!mounted) return;
+      final token = AuthSession.instance.accessToken;
+      if (token != null && token.isNotEmpty) {
+        await ensureBackendProvisioned(context.read<ApiClient>(), token);
+      }
       if (!mounted) return;
       context.go('/dashboard');
     } on AuthException catch (e) {

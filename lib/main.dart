@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/app/funeralface_app.dart';
 import 'package:funeralface_mobile/app/router/app_router.dart';
+import 'package:funeralface_mobile/app/session/auth_session.dart';
 import 'package:funeralface_mobile/core/deeplink/deeplink_coordinator.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
+import 'package:funeralface_mobile/features/auth/backend_provision.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:funeralface_mobile/app/session/auth_session.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,17 @@ Future<void> main() async {
     });
   }
   final apiClient = ApiClient(baseUrl: AppEnv.apiBaseUrl);
+  if (AppEnv.hasSupabaseAuthConfig) {
+    final restored = Supabase.instance.client.auth.currentSession;
+    final t = restored?.accessToken;
+    if (t != null && t.isNotEmpty) {
+      try {
+        await ensureBackendProvisioned(apiClient, t);
+      } catch (_) {
+        // Backend offline, wrong API_BASE_URL, or old server — user may retry after login.
+      }
+    }
+  }
   final router = createAppRouter();
   final deeplinkCoordinator = DeeplinkCoordinator(
     router: router,
