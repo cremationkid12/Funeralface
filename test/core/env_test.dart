@@ -6,6 +6,7 @@ void main() {
     expect(AppEnv.apiBaseUrl, isNotEmpty);
     expect(AppEnv.appEnv, isNotEmpty);
     expect(AppEnv.deeplinkHost, isNotEmpty);
+    expect(AppEnv.familyLinkBaseUrl, isNotEmpty);
     expect(AppEnv.flavor, equals('dev'));
   });
 }

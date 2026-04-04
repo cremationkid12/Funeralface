@@ -35,6 +35,7 @@ Copy `.env.example` to `.env` for local reference only; Dart does not load `.env
 - **Android:** `AndroidManifest.xml` includes a `VIEW` intent-filter with `https`, host **`links.funeralface.app`**, and `pathPrefix` **`/family/`**. Replace that host with your verified domain and complete [Digital Asset Links](https://developer.android.com/training/app-links) before production.
 - **iOS:** `Runner.entitlements` now includes Associated Domains scaffold for `applinks:links.funeralface.app`. Replace host and publish `apple-app-site-association` before production.
 - Runtime link ingestion is wired through `app_links` in `main.dart` and routes matching links to `/family/<token>` only.
+- **Staff copy URL:** `FAMILY_LINK_BASE` (default `https://links.funeralface.app`) is used on the assignment detail screen when generating/copying a family link so the clipboard matches your verified host. Override with `--dart-define=FAMILY_LINK_BASE=https://your-staging-host.example` when testing.
 
 Manual check: `flutter run --flavor dev ...` then open
 `http://localhost:<port>/family/<token>` is not available from the browser; use `adb shell am start -a android.intent.action.VIEW -d "https://links.funeralface.app/family/<token>"` after updating the host to match your manifest.

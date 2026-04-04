@@ -19,6 +19,18 @@ class AppEnv {
     defaultValue: 'localhost',
   );
 
+  /// Base URL shown when staff copy a family link (no trailing slash).
+  /// Must match the verified App Links host in production.
+  static const String familyLinkBaseUrl = String.fromEnvironment(
+    'FAMILY_LINK_BASE',
+    defaultValue: 'https://links.funeralface.app',
+  );
+
+  static String familyShareUrlForToken(String token) {
+    final base = familyLinkBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    return '$base/family/$token';
+  }
+
   static const String supabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
     defaultValue: '',
