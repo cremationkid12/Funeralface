@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
+import 'package:funeralface_mobile/app/session/auth_session.dart';
 import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/core/env.dart';
+import 'package:funeralface_mobile/core/network/api_client.dart';
+import 'package:funeralface_mobile/features/auth/backend_provision.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_usecase.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -16,17 +21,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
   var _depsReady = false;
 
   @override
+  void initState() {
+    super.initState();
+    AuthSession.instance.addListener(_onAuthSessionChanged);
+  }
+
+  @override
+  void dispose() {
+    AuthSession.instance.removeListener(_onAuthSessionChanged);
+    super.dispose();
+  }
+
+  void _onAuthSessionChanged() {
+    if (!mounted) return;
+    final token = staffBearerToken();
+    if (token != null) {
+      setState(() {
+        _overviewFuture = _load();
+      });
+    } else {
+      setState(() => _overviewFuture = null);
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_depsReady) {
       _depsReady = true;
-      _overviewFuture = _load();
+      final token = staffBearerToken();
+      if (token != null) {
+        _overviewFuture = _load();
+      }
     }
   }
 
-  Future<DashboardOverview> _load() {
+  Future<DashboardOverview> _load() async {
+    final token = staffBearerToken();
+    if (token == null || token.isEmpty) {
+      throw StateError('Not signed in');
+    }
+    final api = context.read<ApiClient>();
     final repos = context.read<AppRepositories>();
-    return repos.dashboard.loadOverview(bearerToken: staffBearerToken());
+    if (AppEnv.hasSupabaseAuthConfig) {
+      try {
+        await ensureBackendProvisioned(api, token);
+      } catch (_) {
+        // Startup may have failed silently; load below surfaces real errors.
+      }
+    }
+    return repos.dashboard.loadOverview(bearerToken: token);
   }
 
   Future<void> _refresh() async {
@@ -34,6 +78,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _overviewFuture = _load();
     });
     await _overviewFuture;
+  }
+
+  Future<void> _linkAccountOnServer() async {
+    final token = staffBearerToken();
+    if (token == null || !mounted) return;
+    final api = context.read<ApiClient>();
+    try {
+      await ensureBackendProvisioned(api, token);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account linked. Loading dashboard…')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override
@@ -52,9 +115,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Sign-in is not wired yet. Use a dev JWT to see live counts.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (!AppEnv.hasSupabaseAuthConfig) ...[
+                        Text(
+                          'Supabase auth is not configured. Pass SUPABASE_URL and SUPABASE_ANON_KEY as separate '
+                          '--dart-define arguments (each flag needs a space before the next). '
+                          'Without them, the app cannot show Register / Login before the staff tabs.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ] else ...[
+                        Text(
+                          'You are not signed in. Use Register or Log in to load dashboard data.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: () => context.go('/auth'),
+                          child: const Text('Go to sign in'),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               )
@@ -72,9 +154,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   }
                   if (snapshot.hasError) {
+                    final msg = snapshot.error.toString();
+                    final notProvisioned =
+                        msg.contains('not provisioned') || msg.contains('Account is not provisioned');
                     return _ErrorCard(
-                      message: snapshot.error.toString(),
+                      message: msg,
                       onRetry: _refresh,
+                      onLinkServer: notProvisioned ? _linkAccountOnServer : null,
                     );
                   }
                   final s = snapshot.data!;
@@ -187,10 +273,15 @@ class _StatCard extends StatelessWidget {
 }
 
 class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.message, required this.onRetry});
+  const _ErrorCard({
+    required this.message,
+    required this.onRetry,
+    this.onLinkServer,
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final VoidCallback? onLinkServer;
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +296,18 @@ class _ErrorCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(message, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 12),
-            FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
+                if (onLinkServer != null)
+                  FilledButton(
+                    onPressed: onLinkServer,
+                    child: const Text('Link account to server'),
+                  ),
+              ],
+            ),
           ],
         ),
       ),

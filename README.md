@@ -16,6 +16,8 @@ Supabase auth mode (register/login pages + session restore):
 flutter run --flavor dev --dart-define=API_BASE_URL=http://10.0.2.2:8010 --dart-define=APP_ENV=development --dart-define=SUPABASE_URL=https://your-project.supabase.co --dart-define=SUPABASE_ANON_KEY=<anon-key>
 ```
 
+**Important:** There must be a **space** before each `--dart-define`. If you paste flags back-to-back (for example `...supabase.co--dart-define=SUPABASE_ANON_KEY=...`), Flutter treats the URL as one long invalid value and **Supabase auth is disabled**, so the app will not redirect to `/auth` and Register/Login will not appear.
+
 On **Android**, `dev`, `staging`, and `prod` product flavors are defined (P4.1). Pass `--flavor` for `flutter run` / `flutter build apk`. Use `prod` for release-style builds (no application id suffix). **iOS** does not mirror flavors yet; use the same `--dart-define` values.
 
 For a physical device, use your machine LAN IP instead of `localhost`.
