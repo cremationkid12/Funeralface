@@ -47,4 +47,27 @@ void main() {
     final api = ApiClient(baseUrl: 'http://localhost:8010', httpClient: client);
     await api.delete('/v1/staff/1');
   });
+
+  test('bare production host gets https scheme', () async {
+    final client = MockClient((request) async {
+      expect(
+        request.url.toString(),
+        'https://api.example.com/v1/health',
+      );
+      return http.Response('{}', 200);
+    });
+
+    final api = ApiClient(baseUrl: 'api.example.com', httpClient: client);
+    await api.getJson('/v1/health');
+  });
+
+  test('bare emulator loopback gets http scheme', () async {
+    final client = MockClient((request) async {
+      expect(request.url.toString(), 'http://10.0.2.2:8010/v1/health');
+      return http.Response('{}', 200);
+    });
+
+    final api = ApiClient(baseUrl: '10.0.2.2:8010', httpClient: client);
+    await api.getJson('/v1/health');
+  });
 }

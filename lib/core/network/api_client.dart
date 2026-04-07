@@ -11,9 +11,26 @@ class ApiClient {
   final String baseUrl;
   final http.Client _httpClient;
 
+  /// Ensures a valid absolute origin: [AppEnv.apiBaseUrl] must include `https://` for Railway,
+  /// but we accept bare hosts and default to `https://` (or `http://` for common local dev hosts).
+  String _normalizedBase() {
+    var b = baseUrl.trim();
+    if (b.isEmpty) return b;
+    b = b.replaceAll(RegExp(r'/+$'), '');
+    if (RegExp(r'^[a-zA-Z][\w+.-]*://').hasMatch(b)) return b;
+    final lower = b.toLowerCase();
+    if (lower.startsWith('localhost') ||
+        lower.startsWith('127.0.0.1') ||
+        lower.startsWith('10.0.2.2') ||
+        lower.startsWith('0.0.0.0')) {
+      return 'http://$b';
+    }
+    return 'https://$b';
+  }
+
   Uri _uri(String path) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
-    return Uri.parse('$baseUrl$normalizedPath');
+    return Uri.parse('${_normalizedBase()}$normalizedPath');
   }
 
   Map<String, String> _headers({String? bearerToken}) {
