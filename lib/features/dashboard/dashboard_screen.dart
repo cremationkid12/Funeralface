@@ -11,6 +11,7 @@ import 'package:funeralface_mobile/features/dashboard/dashboard_usecase.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -190,8 +191,28 @@ class _DashboardHeader extends StatelessWidget {
     return '${weekdays[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
   }
 
+  /// Returns the user's first name from Supabase metadata or email prefix.
+  static String _firstName() {
+    if (!AppEnv.hasSupabaseAuthConfig) return '';
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return '';
+      final meta = user.userMetadata;
+      final full = meta?['full_name']?.toString() ??
+          meta?['name']?.toString() ??
+          '';
+      if (full.trim().isNotEmpty) return full.trim().split(' ').first;
+      final email = user.email ?? '';
+      if (email.isNotEmpty) return email.split('@').first;
+    } catch (_) {}
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final firstName = _firstName();
+    final initial = firstName.isNotEmpty ? firstName[0].toUpperCase() : null;
+
     return Container(
       color: AppColors.primary,
       padding: EdgeInsets.fromLTRB(
@@ -202,16 +223,26 @@ class _DashboardHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar placeholder
+          // Avatar — initial letter or fallback icon
           Container(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+            decoration: const BoxDecoration(
+              color: Colors.white,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white38, width: 1.5),
             ),
-            child: const Icon(Icons.person, color: Colors.white, size: 26),
+            child: Center(
+              child: initial != null
+                  ? Text(
+                      initial,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : const Icon(Icons.person, color: AppColors.primary, size: 26),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -219,7 +250,9 @@ class _DashboardHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_greeting()}!',
+                  firstName.isNotEmpty
+                      ? '${_greeting()} $firstName!'
+                      : '${_greeting()}!',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -366,50 +399,54 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: isCenter ? 20 : 16,
-      ),
-      decoration: BoxDecoration(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: BoxConstraints(minHeight: isCenter ? 160 : 140),
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Colors.white70,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: isCenter ? 32 : 26,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // ── Title + number ────────────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.fromLTRB(12, isCenter ? 18 : 14, 12, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: GoogleFonts.poppins(
+                      fontSize: isCenter ? 42 : 36,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
             ),
-          ),
-        ],
+
+            // ── Icon section — full-width bottom bar ──────────────────────
+            // ClipRRect on the parent handles corner clipping — no borderRadius needed here
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              color: Colors.white.withValues(alpha: 0.12),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+          ],
+        ),
       ),
     );
   }
