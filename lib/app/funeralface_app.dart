@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:funeralface_mobile/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
 class FuneralfaceApp extends StatelessWidget {
@@ -9,11 +10,8 @@ class FuneralfaceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Funeralface',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF78716C)),
-        useMaterial3: true,
-      ),
+      title: 'EverRoute',
+      theme: AppTheme.light,
       routerConfig: routerConfig,
     );
   }
