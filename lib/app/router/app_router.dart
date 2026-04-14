@@ -6,13 +6,14 @@ import 'package:funeralface_mobile/app/session/auth_session.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/features/family/family_assignment_screen.dart';
 import 'package:funeralface_mobile/features/settings/settings_screen.dart';
+import 'package:funeralface_mobile/features/splash/splash_screen.dart';
 import 'package:funeralface_mobile/features/staff/staff_detail_screen.dart';
 import 'package:funeralface_mobile/features/staff/staff_screen.dart';
 import 'package:funeralface_mobile/shell/main_shell.dart';
 import 'package:go_router/go_router.dart';
 
 /// Staff shell routes + family deep-link route (`/family/:token`).
-GoRouter createAppRouter({String initialLocation = '/dashboard'}) {
+GoRouter createAppRouter({String initialLocation = '/splash'}) {
   return GoRouter(
     initialLocation: initialLocation,
     refreshListenable: AuthSession.instance,
@@ -22,12 +23,18 @@ GoRouter createAppRouter({String initialLocation = '/dashboard'}) {
       final authed = AuthSession.instance.isAuthenticated;
       final isFamily = path.startsWith('/family/');
       final isAuth = path == '/auth';
-      if (isFamily) return null;
+      final isSplash = path == '/splash';
+      if (isFamily || isSplash) return null;
       if (!authed && !isAuth) return '/auth';
       if (authed && isAuth) return '/dashboard';
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/auth',
         name: 'auth',
