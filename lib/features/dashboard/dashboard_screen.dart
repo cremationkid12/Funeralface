@@ -399,59 +399,54 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(minHeight: isCenter ? 160 : 140),
-      decoration: BoxDecoration(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: BoxConstraints(minHeight: isCenter ? 160 : 140),
         color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // ── Title + number ──────────────────────────────────────────────
-          Padding(
-            padding: EdgeInsets.fromLTRB(12, isCenter ? 18 : 14, 12, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white70,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // ── Title + number ────────────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.fromLTRB(12, isCenter ? 18 : 14, 12, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    fontSize: isCenter ? 34 : 28,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: GoogleFonts.poppins(
+                      fontSize: isCenter ? 42 : 36,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Icon section — full-width bottom bar ────────────────────────
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
+                ],
               ),
             ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-        ],
+
+            // ── Icon section — full-width bottom bar ──────────────────────
+            // ClipRRect on the parent handles corner clipping — no borderRadius needed here
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              color: Colors.white.withValues(alpha: 0.12),
+              child: Icon(icon, color: Colors.white, size: 24),
+            ),
+          ],
+        ),
       ),
     );
   }
