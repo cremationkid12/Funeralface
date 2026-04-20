@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/features/staff/staff_repository.dart';
+import 'package:funeralface_mobile/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
@@ -55,10 +55,9 @@ class _StaffScreenState extends State<StaffScreen> {
       _error = null;
     });
     try {
-      final items = await context
-          .read<AppRepositories>()
-          .staff
-          .listStaff(bearerToken: token);
+      final items = await context.read<AppRepositories>().staff.listStaff(
+        bearerToken: token,
+      );
       if (!mounted) return;
       setState(() {
         _items = items;
@@ -80,9 +79,8 @@ class _StaffScreenState extends State<StaffScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AddStaffSheet(
-        repositories: context.read<AppRepositories>(),
-      ),
+      builder: (_) =>
+          _AddStaffSheet(repositories: context.read<AppRepositories>()),
     );
     if (created == null || !mounted) return;
     final hasFields = created['name'] != null && created['phone'] != null;
@@ -98,9 +96,8 @@ class _StaffScreenState extends State<StaffScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _InviteStaffSheet(
-        repositories: context.read<AppRepositories>(),
-      ),
+      builder: (_) =>
+          _InviteStaffSheet(repositories: context.read<AppRepositories>()),
     );
     if (invited == true && mounted) await _refresh();
   }
@@ -118,8 +115,7 @@ class _StaffScreenState extends State<StaffScreen> {
             // ── Header card ──────────────────────────────────────────────
             Container(
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
@@ -151,8 +147,11 @@ class _StaffScreenState extends State<StaffScreen> {
                         color: AppColors.accent,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.mail_outline_rounded,
-                          color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.mail_outline_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -166,8 +165,11 @@ class _StaffScreenState extends State<StaffScreen> {
                         color: AppColors.accent,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.person_add_outlined,
-                          color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.person_add_outlined,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                 ],
@@ -179,92 +181,78 @@ class _StaffScreenState extends State<StaffScreen> {
             // ── List body ────────────────────────────────────────────────
             Expanded(
               child: token == null
-                  ? _MessageBody(
-                      message: 'Please sign in to load staff.')
+                  ? _MessageBody(message: 'Please sign in to load staff.')
                   : RefreshIndicator(
                       onRefresh: _refresh,
                       color: AppColors.primary,
                       child: _loading
                           ? const Center(
                               child: CircularProgressIndicator(
-                                  color: AppColors.primary),
+                                color: AppColors.primary,
+                              ),
                             )
                           : _error != null
-                              ? _ErrorBody(
-                                  error: _error!,
-                                  onRetry: _refresh,
-                                )
-                              : _items.isEmpty
-                                  ? _EmptyBody()
-                                  : ListView.builder(
-                                      physics:
-                                          const AlwaysScrollableScrollPhysics(),
-                                      padding: const EdgeInsets.fromLTRB(
-                                          16, 0, 16, 24),
-                                      itemCount: _items.length,
-                                      itemBuilder: (context, i) {
-                                        final m = _items[i]
-                                            as Map<String, dynamic>;
-                                        final id =
-                                            m['id']?.toString() ?? '';
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 10),
-                                          child: _StaffCard(
-                                            data: m,
-                                            onTap: id.isEmpty
-                                                ? null
-                                                : () async {
-                                                    final result = await context
-                                                        .push<Map<String,
-                                                            dynamic>>(
-                                                      '/staff/$id',
-                                                      extra: m,
-                                                    );
-                                                    if (result == null || !mounted) {
-                                                      return;
-                                                    }
-                                                    if (result['deleted'] ==
-                                                        true) {
-                                                      setState(() {
-                                                        _items = _items
-                                                            .where((it) =>
-                                                                it['id']
-                                                                    ?.toString() !=
-                                                                id)
-                                                            .toList();
-                                                      });
-                                                      return;
-                                                    }
-                                                    final hasFields =
-                                                        result['name'] !=
-                                                                null &&
-                                                            result['phone'] !=
-                                                                null;
-                                                    if (!hasFields) {
-                                                      await _refresh();
-                                                      return;
-                                                    }
-                                                    final idx = _items
-                                                        .indexWhere((it) =>
-                                                            it['id']
-                                                                ?.toString() ==
-                                                            id);
-                                                    setState(() {
-                                                      if (idx >= 0) {
-                                                        _items[idx] = result;
-                                                      } else {
-                                                        _items = [
-                                                          result,
-                                                          ..._items
-                                                        ];
-                                                      }
-                                                    });
-                                                  },
-                                          ),
-                                        );
-                                      },
-                                    ),
+                          ? _ErrorBody(error: _error!, onRetry: _refresh)
+                          : _items.isEmpty
+                          ? _EmptyBody()
+                          : ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                              itemCount: _items.length,
+                              itemBuilder: (context, i) {
+                                final m = _items[i] as Map<String, dynamic>;
+                                final id = m['id']?.toString() ?? '';
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _StaffCard(
+                                    data: m,
+                                    onTap: id.isEmpty
+                                        ? null
+                                        : () async {
+                                            final result = await context
+                                                .push<Map<String, dynamic>>(
+                                                  '/staff/$id',
+                                                  extra: m,
+                                                );
+                                            if (result == null || !mounted) {
+                                              return;
+                                            }
+                                            if (result['deleted'] == true) {
+                                              setState(() {
+                                                _items = _items
+                                                    .where(
+                                                      (it) =>
+                                                          it['id']
+                                                              ?.toString() !=
+                                                          id,
+                                                    )
+                                                    .toList();
+                                              });
+                                              return;
+                                            }
+                                            final hasFields =
+                                                result['name'] != null &&
+                                                result['phone'] != null;
+                                            if (!hasFields) {
+                                              await _refresh();
+                                              return;
+                                            }
+                                            final idx = _items.indexWhere(
+                                              (it) =>
+                                                  it['id']?.toString() == id,
+                                            );
+                                            setState(() {
+                                              if (idx >= 0) {
+                                                _items[idx] = result;
+                                              } else {
+                                                _items = [result, ..._items];
+                                              }
+                                            });
+                                          },
+                                  ),
+                                );
+                              },
+                            ),
                     ),
             ),
           ],
@@ -293,7 +281,12 @@ class _StaffCard extends StatelessWidget {
       return a?.toString().toLowerCase() != 'false';
     }();
     final initials = name.trim().isNotEmpty
-        ? name.trim().split(' ').map((w) => w.isNotEmpty ? w[0] : '').take(2).join()
+        ? name
+              .trim()
+              .split(' ')
+              .map((w) => w.isNotEmpty ? w[0] : '')
+              .take(2)
+              .join()
         : '?';
 
     return GestureDetector(
@@ -372,8 +365,11 @@ class _StaffCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(Icons.phone_outlined,
-                            size: 12, color: AppColors.textSecondary),
+                        const Icon(
+                          Icons.phone_outlined,
+                          size: 12,
+                          color: AppColors.textSecondary,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           phone,
@@ -407,9 +403,7 @@ class _RoleChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isAdmin
-            ? AppColors.statusEnRouteBg
-            : AppColors.accentSurface,
+        color: isAdmin ? AppColors.statusEnRouteBg : AppColors.accentSurface,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -464,21 +458,25 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
       };
       final e = _email.text.trim();
       if (e.isNotEmpty) payload['email'] = e;
-      final created = await widget.repositories.staff
-          .createStaff(payload: payload, bearerToken: token);
+      final created = await widget.repositories.staff.createStaff(
+        payload: payload,
+        bearerToken: token,
+      );
       if (!mounted) return;
       Navigator.of(context).pop(created);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Staff member created')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Staff member created')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -493,7 +491,9 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.3), width: 2),
+          color: AppColors.primary.withValues(alpha: 0.3),
+          width: 2,
+        ),
       ),
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 20 + bottom),
@@ -588,25 +588,28 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
     if (token == null) return;
     setState(() => _submitting = true);
     try {
-      await widget.repositories.staff
-          .inviteByEmail(email: _email.text.trim(), bearerToken: token);
+      await widget.repositories.staff.inviteByEmail(
+        email: _email.text.trim(),
+        bearerToken: token,
+      );
       if (!mounted) return;
       Navigator.of(context).pop(true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Invite sent (check email / Supabase config).')),
+          content: Text('Invite sent (check email / Supabase config).'),
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
       final msg = e.statusCode == 403
           ? 'Forbidden: admin role required to invite.'
           : e.message;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -621,7 +624,9 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.3), width: 2),
+          color: AppColors.primary.withValues(alpha: 0.3),
+          width: 2,
+        ),
       ),
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 20 + bottom),
@@ -640,10 +645,9 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
               Text(
                 'Send an invite link to a team member\'s email.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 20),
               _SheetField(
@@ -655,8 +659,9 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                 required: true,
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';
-                  if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-                      .hasMatch(v.trim())) {
+                  if (!RegExp(
+                    r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                  ).hasMatch(v.trim())) {
                     return 'Enter a valid email';
                   }
                   return null;
@@ -721,7 +726,8 @@ class _SheetField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           style: GoogleFonts.poppins(fontSize: 14),
-          validator: validator ??
+          validator:
+              validator ??
               (required
                   ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null
                   : null),
@@ -731,8 +737,10 @@ class _SheetField extends StatelessWidget {
               padding: const EdgeInsets.only(left: 12, right: 8),
               child: Icon(icon, color: AppColors.accent, size: 18),
             ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 0, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0,
+              minHeight: 0,
+            ),
           ),
         ),
       ],
@@ -768,24 +776,33 @@ class _RoleDropdown extends StatelessWidget {
         DropdownButtonFormField<String>(
           initialValue: value,
           style: GoogleFonts.poppins(
-              fontSize: 14, color: AppColors.textPrimary),
+            fontSize: 14,
+            color: AppColors.textPrimary,
+          ),
           decoration: InputDecoration(
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 12, right: 8),
-              child: const Icon(Icons.work_outline_rounded,
-                  color: AppColors.accent, size: 18),
+              child: const Icon(
+                Icons.work_outline_rounded,
+                color: AppColors.accent,
+                size: 18,
+              ),
             ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 0, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0,
+              minHeight: 0,
+            ),
           ),
-          items: StaffRepository.roles
-              .map((r) => DropdownMenuItem<String>(
-                    value: r,
-                    child: Text(
-                      r[0].toUpperCase() + r.substring(1),
-                      style: GoogleFonts.poppins(fontSize: 14),
-                    ),
-                  ))
+          items: StaffServices.roles
+              .map(
+                (r) => DropdownMenuItem<String>(
+                  value: r,
+                  child: Text(
+                    r[0].toUpperCase() + r.substring(1),
+                    style: GoogleFonts.poppins(fontSize: 14),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: enabled ? onChanged : null,
         ),
@@ -816,7 +833,9 @@ class _SheetPrimaryButton extends StatelessWidget {
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Text(label),
       ),
@@ -855,10 +874,9 @@ class _EmptyBody extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'No staff yet',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -874,7 +892,8 @@ class _ErrorBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = error is ApiException && (error as ApiException).statusCode == 403
+    final message =
+        error is ApiException && (error as ApiException).statusCode == 403
         ? 'Admin role required to manage staff.'
         : error.toString();
     return ListView(
@@ -890,9 +909,13 @@ class _ErrorBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(message,
-                  style: GoogleFonts.poppins(
-                      fontSize: 13, color: AppColors.statusCancelledFg)),
+              Text(
+                message,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: AppColors.statusCancelledFg,
+                ),
+              ),
               const SizedBox(height: 12),
               FilledButton(onPressed: onRetry, child: const Text('Retry')),
             ],
@@ -913,9 +936,11 @@ class _MessageBody extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Text(message,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
       ),
     );
   }

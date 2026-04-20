@@ -1,7 +1,7 @@
-import '../../core/network/api_client.dart';
+import '../core/network/api_client.dart';
 
-class AssignmentsRepository {
-  AssignmentsRepository(this._apiClient);
+class AssignmentsServices {
+  AssignmentsServices(this._apiClient);
 
   final ApiClient _apiClient;
 

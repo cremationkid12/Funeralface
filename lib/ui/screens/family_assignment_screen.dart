@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/features/family/family_assignment_repository.dart';
+import 'package:funeralface_mobile/services/family_assignment_services.dart';
 import 'package:funeralface_mobile/features/family/family_assignment_view.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Family-facing status screen (public token; no staff JWT.)

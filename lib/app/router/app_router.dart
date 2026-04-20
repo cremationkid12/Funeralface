@@ -1,14 +1,13 @@
-import 'package:funeralface_mobile/features/assignments/assignments_screen.dart';
-import 'package:funeralface_mobile/features/assignments/assignment_detail_screen.dart';
-import 'package:funeralface_mobile/features/auth/auth_screen.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_screen.dart';
-import 'package:funeralface_mobile/app/session/auth_session.dart';
-import 'package:funeralface_mobile/core/env.dart';
-import 'package:funeralface_mobile/features/family/family_assignment_screen.dart';
-import 'package:funeralface_mobile/features/settings/settings_screen.dart';
-import 'package:funeralface_mobile/features/splash/splash_screen.dart';
-import 'package:funeralface_mobile/features/staff/staff_detail_screen.dart';
-import 'package:funeralface_mobile/features/staff/staff_screen.dart';
+import 'package:funeralface_mobile/ui/screens/assignments_screen.dart';
+import 'package:funeralface_mobile/ui/screens/assignment_detail_screen.dart';
+import 'package:funeralface_mobile/ui/screens/auth_screen.dart';
+import 'package:funeralface_mobile/ui/screens/dashboard_screen.dart';
+import 'package:funeralface_mobile/features/session/auth_session.dart';
+import 'package:funeralface_mobile/ui/screens/family_assignment_screen.dart';
+import 'package:funeralface_mobile/ui/screens/settings_screen.dart';
+import 'package:funeralface_mobile/ui/screens/splash/splash_screen.dart';
+import 'package:funeralface_mobile/ui/screens/staff_detail_screen.dart';
+import 'package:funeralface_mobile/ui/screens/staff_screen.dart';
 import 'package:funeralface_mobile/shell/main_shell.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,7 +17,6 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
     initialLocation: initialLocation,
     refreshListenable: AuthSession.instance,
     redirect: (context, state) {
-      if (!AppEnv.hasSupabaseAuthConfig) return null;
       final path = state.uri.path;
       final authed = AuthSession.instance.isAuthenticated;
       final isFamily = path.startsWith('/family/');

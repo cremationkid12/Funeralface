@@ -1,5 +1,5 @@
-import '../assignments/assignments_repository.dart';
-import '../staff/staff_repository.dart';
+import '../../services/assignments_services.dart';
+import '../../services/staff_services.dart';
 
 /// Dashboard counts plus a short recent-assignments list (API returns newest first).
 class DashboardOverview {
@@ -22,13 +22,13 @@ class DashboardOverview {
 
 class DashboardUseCase {
   DashboardUseCase({
-    required StaffRepository staffRepository,
-    required AssignmentsRepository assignmentsRepository,
-  })  : _staffRepository = staffRepository,
-        _assignmentsRepository = assignmentsRepository;
+    required StaffServices staffRepository,
+    required AssignmentsServices assignmentsRepository,
+  }) : _staffRepository = staffRepository,
+       _assignmentsRepository = assignmentsRepository;
 
-  final StaffRepository _staffRepository;
-  final AssignmentsRepository _assignmentsRepository;
+  final StaffServices _staffRepository;
+  final AssignmentsServices _assignmentsRepository;
 
   Future<DashboardOverview> loadOverview({String? bearerToken}) async {
     final results = await Future.wait<List<dynamic>>([
@@ -38,7 +38,9 @@ class DashboardUseCase {
 
     final staff = results[0];
     final assignments = results[1];
-    final completed = assignments.where((a) => (a as Map)['status'] == 'completed').length;
+    final completed = assignments
+        .where((a) => (a as Map)['status'] == 'completed')
+        .length;
     final active = assignments.length - completed;
 
     final recent = assignments

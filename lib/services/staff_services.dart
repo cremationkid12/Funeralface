@@ -1,14 +1,17 @@
-import '../../core/network/api_client.dart';
+import '../core/network/api_client.dart';
 
-class StaffRepository {
-  StaffRepository(this._apiClient);
+class StaffServices {
+  StaffServices(this._apiClient);
 
   final ApiClient _apiClient;
 
   static const List<String> roles = <String>['user', 'admin'];
 
   Future<List<dynamic>> listStaff({String? bearerToken}) async {
-    final response = await _apiClient.getJson('/v1/staff', bearerToken: bearerToken);
+    final response = await _apiClient.getJson(
+      '/v1/staff',
+      bearerToken: bearerToken,
+    );
     return response['items'] as List<dynamic>? ?? const [];
   }
 
@@ -16,7 +19,11 @@ class StaffRepository {
     required Map<String, dynamic> payload,
     String? bearerToken,
   }) {
-    return _apiClient.postJson('/v1/staff', body: payload, bearerToken: bearerToken);
+    return _apiClient.postJson(
+      '/v1/staff',
+      body: payload,
+      bearerToken: bearerToken,
+    );
   }
 
   Future<Map<String, dynamic>> updateStaff({
@@ -24,14 +31,21 @@ class StaffRepository {
     required Map<String, dynamic> payload,
     String? bearerToken,
   }) {
-    return _apiClient.patchJson('/v1/staff/$id', body: payload, bearerToken: bearerToken);
+    return _apiClient.patchJson(
+      '/v1/staff/$id',
+      body: payload,
+      bearerToken: bearerToken,
+    );
   }
 
   Future<void> deleteStaff({required String id, String? bearerToken}) {
     return _apiClient.delete('/v1/staff/$id', bearerToken: bearerToken);
   }
 
-  Future<Map<String, dynamic>> activateStaff({required String id, String? bearerToken}) {
+  Future<Map<String, dynamic>> activateStaff({
+    required String id,
+    String? bearerToken,
+  }) {
     return _apiClient.postJson(
       '/v1/staff/$id/activate',
       body: const <String, dynamic>{},
@@ -39,7 +53,10 @@ class StaffRepository {
     );
   }
 
-  Future<Map<String, dynamic>> deactivateStaff({required String id, String? bearerToken}) {
+  Future<Map<String, dynamic>> deactivateStaff({
+    required String id,
+    String? bearerToken,
+  }) {
     return _apiClient.postJson(
       '/v1/staff/$id/deactivate',
       body: const <String, dynamic>{},

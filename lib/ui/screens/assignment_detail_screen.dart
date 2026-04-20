@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/family_share_token.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/features/assignments/assignments_repository.dart';
-import 'package:provider/provider.dart';
+import 'package:funeralface_mobile/services/assignments_services.dart';
 
 class AssignmentDetailScreen extends StatefulWidget {
   const AssignmentDetailScreen({
@@ -39,11 +39,21 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _decedentName = TextEditingController(text: widget.initial['decedent_name']?.toString() ?? '');
-    _pickupAddress = TextEditingController(text: widget.initial['pickup_address']?.toString() ?? '');
-    _contactName = TextEditingController(text: widget.initial['contact_name']?.toString() ?? '');
-    _contactPhone = TextEditingController(text: widget.initial['contact_phone']?.toString() ?? '');
-    _notes = TextEditingController(text: widget.initial['notes']?.toString() ?? '');
+    _decedentName = TextEditingController(
+      text: widget.initial['decedent_name']?.toString() ?? '',
+    );
+    _pickupAddress = TextEditingController(
+      text: widget.initial['pickup_address']?.toString() ?? '',
+    );
+    _contactName = TextEditingController(
+      text: widget.initial['contact_name']?.toString() ?? '',
+    );
+    _contactPhone = TextEditingController(
+      text: widget.initial['contact_phone']?.toString() ?? '',
+    );
+    _notes = TextEditingController(
+      text: widget.initial['notes']?.toString() ?? '',
+    );
     _status = widget.initial['status']?.toString() ?? 'pending';
     _readShareFromMap(widget.initial);
   }
@@ -75,7 +85,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     if (token == null) return;
     setState(() => _saving = true);
     try {
-      final body = await context.read<AppRepositories>().assignments.updateAssignment(
+      final body = await context
+          .read<AppRepositories>()
+          .assignments
+          .updateAssignment(
             assignmentId: widget.assignmentId,
             bearerToken: token,
             payload: {
@@ -88,13 +101,19 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           );
       if (!mounted) return;
       _applyAssignmentResponse(body);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Assignment saved')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Assignment saved')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -108,7 +127,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       _status = next;
     });
     try {
-      final body = await context.read<AppRepositories>().assignments.updateAssignment(
+      final body = await context
+          .read<AppRepositories>()
+          .assignments
+          .updateAssignment(
             assignmentId: widget.assignmentId,
             bearerToken: token,
             payload: {'status': next},
@@ -120,10 +142,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -132,9 +158,13 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   Future<void> _copyFamilyLink() async {
     final t = _shareToken;
     if (t == null || t.isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: AppEnv.familyShareUrlForToken(t)));
+    await Clipboard.setData(
+      ClipboardData(text: AppEnv.familyShareUrlForToken(t)),
+    );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Link copied')));
   }
 
   Future<void> _issueShareTokenAndCopy() async {
@@ -143,24 +173,33 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     final newToken = generateFamilyShareToken();
     setState(() => _saving = true);
     try {
-      final body = await context.read<AppRepositories>().assignments.updateAssignment(
+      final body = await context
+          .read<AppRepositories>()
+          .assignments
+          .updateAssignment(
             assignmentId: widget.assignmentId,
             bearerToken: token,
             payload: {'share_token': newToken},
           );
       if (!mounted) return;
       _applyAssignmentResponse(body);
-      await Clipboard.setData(ClipboardData(text: AppEnv.familyShareUrlForToken(newToken)));
+      await Clipboard.setData(
+        ClipboardData(text: AppEnv.familyShareUrlForToken(newToken)),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('New family link saved and copied')),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -171,20 +210,29 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     if (token == null) return;
     setState(() => _saving = true);
     try {
-      final body = await context.read<AppRepositories>().assignments.updateAssignment(
+      final body = await context
+          .read<AppRepositories>()
+          .assignments
+          .updateAssignment(
             assignmentId: widget.assignmentId,
             bearerToken: token,
             payload: {'share_token': null},
           );
       if (!mounted) return;
       _applyAssignmentResponse(body);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Family link revoked')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Family link revoked')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -199,8 +247,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           'Anyone with the old link will no longer see status. A new link will be created and copied.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Regenerate')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Regenerate'),
+          ),
         ],
       ),
     );
@@ -212,10 +266,18 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Revoke family link?'),
-        content: const Text('Family members will not be able to open the status page with this link.'),
+        content: const Text(
+          'Family members will not be able to open the status page with this link.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Revoke'),
+          ),
         ],
       ),
     );
@@ -225,8 +287,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final token = staffBearerToken();
-    final shareUrl =
-        (_shareToken != null && _shareToken!.isNotEmpty) ? AppEnv.familyShareUrlForToken(_shareToken!) : null;
+    final shareUrl = (_shareToken != null && _shareToken!.isNotEmpty)
+        ? AppEnv.familyShareUrlForToken(_shareToken!)
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -235,7 +298,11 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           TextButton(
             onPressed: token == null || _saving ? null : _save,
             child: _saving
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Text('Save'),
           ),
         ],
@@ -264,9 +331,16 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     ),
                     DropdownButton<String>(
                       value: _status,
-                      onChanged: _saving ? null : (v) => v == null ? null : _setStatus(v),
-                      items: AssignmentsRepository.statuses
-                          .map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
+                      onChanged: _saving
+                          ? null
+                          : (v) => v == null ? null : _setStatus(v),
+                      items: AssignmentsServices.statuses
+                          .map(
+                            (s) => DropdownMenuItem<String>(
+                              value: s,
+                              child: Text(s),
+                            ),
+                          )
                           .toList(),
                     ),
                   ],
@@ -327,7 +401,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (shareUrl != null) ...[
-                  SelectableText(shareUrl, style: Theme.of(context).textTheme.bodyMedium),
+                  SelectableText(
+                    shareUrl,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   if (_shareExpiresIso != null && _shareExpiresIso!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),

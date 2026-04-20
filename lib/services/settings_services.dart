@@ -1,7 +1,7 @@
-import '../../core/network/api_client.dart';
+import '../core/network/api_client.dart';
 
-class SettingsRepository {
-  SettingsRepository(this._apiClient);
+class SettingsServices {
+  SettingsServices(this._apiClient);
 
   final ApiClient _apiClient;
 
@@ -13,6 +13,10 @@ class SettingsRepository {
     Map<String, dynamic> payload, {
     String? bearerToken,
   }) {
-    return _apiClient.patchJson('/v1/settings', body: payload, bearerToken: bearerToken);
+    return _apiClient.patchJson(
+      '/v1/settings',
+      body: payload,
+      bearerToken: bearerToken,
+    );
   }
 }

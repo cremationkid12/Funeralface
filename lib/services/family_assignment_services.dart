@@ -1,12 +1,7 @@
-import '../../core/network/api_client.dart';
-import 'family_assignment_view.dart';
+import '../core/network/api_client.dart';
+import '../features/family/family_assignment_view.dart';
 
-enum FamilyAssignmentFailure {
-  notFound,
-  expired,
-  rateLimited,
-  unknown,
-}
+enum FamilyAssignmentFailure { notFound, expired, rateLimited, unknown }
 
 class FamilyAssignmentResult {
   const FamilyAssignmentResult._(this.view, this.failureCode, this.message);
@@ -30,8 +25,8 @@ class FamilyAssignmentResult {
 }
 
 /// Reads family-assignment data via the public token endpoint (no auth).
-class FamilyAssignmentRepository {
-  FamilyAssignmentRepository(this._apiClient);
+class FamilyAssignmentServices {
+  FamilyAssignmentServices(this._apiClient);
 
   final ApiClient _apiClient;
 

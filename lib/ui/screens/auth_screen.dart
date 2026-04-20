@@ -1,16 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:funeralface_mobile/app/session/auth_session.dart';
-import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/features/auth/backend_provision.dart';
-import 'package:funeralface_mobile/features/auth/supabase_auth_service.dart';
+import 'package:funeralface_mobile/features/auth/auth_cubit.dart';
+import 'package:funeralface_mobile/features/auth/auth_state.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -36,12 +33,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _signupPasswordVisible = false;
   bool _signupAcceptTerms = false;
 
-  bool _busy = false;
-  String? _error;
-  String? _info;
-
-  SupabaseAuthService get _auth =>
-      SupabaseAuthService(Supabase.instance.client);
+  AuthCubit get _authCubit => context.read<AuthCubit>();
 
   @override
   void dispose() {
@@ -54,236 +46,178 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _switchMode() {
-    setState(() {
-      _isLogin = !_isLogin;
-      _error = null;
-      _info = null;
-    });
+    setState(() => _isLogin = !_isLogin);
+    _authCubit.clearMessages();
   }
 
   Future<void> _doLogin() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-      _info = null;
-    });
-    try {
-      await _auth.login(
-        email: _loginEmail.text.trim(),
-        password: _loginPassword.text,
-      );
-      if (!mounted) return;
-      final token = AuthSession.instance.accessToken;
-      if (token != null && token.isNotEmpty) {
-        await ensureBackendProvisioned(context.read<ApiClient>(), token);
-      }
-      if (!mounted) return;
+    await _authCubit.login(
+      email: _loginEmail.text.trim(),
+      password: _loginPassword.text,
+      apiClient: context.read<ApiClient>(),
+    );
+    if (!mounted) return;
+    if (_authCubit.state.success) {
       context.go('/dashboard');
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _doSignup() async {
     if (!_signupAcceptTerms) {
-      setState(() => _error = 'Please accept the Terms & Conditions.');
+      _authCubit.setError('Please accept the Terms & Conditions.');
       return;
     }
-    setState(() {
-      _busy = true;
-      _error = null;
-      _info = null;
-    });
-    try {
-      await _auth.register(
-        email: _signupEmail.text.trim(),
-        password: _signupPassword.text,
-      );
-      if (!mounted) return;
-      final token = AuthSession.instance.accessToken;
-      if (token != null && token.isNotEmpty) {
-        await ensureBackendProvisioned(context.read<ApiClient>(), token);
-      }
-      if (!mounted) return;
+    await _authCubit.register(
+      email: _signupEmail.text.trim(),
+      password: _signupPassword.text,
+      apiClient: context.read<ApiClient>(),
+    );
+    if (!mounted) return;
+    if (_authCubit.state.success) {
       context.go('/dashboard');
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _openForgotPassword() async {
-    final emailController =
-        TextEditingController(text: _loginEmail.text.trim());
+    final emailController = TextEditingController(
+      text: _loginEmail.text.trim(),
+    );
     final email = await showDialog<String>(
       context: context,
       builder: (ctx) => _ForgotPasswordDialog(controller: emailController),
     );
     emailController.dispose();
     if (!mounted || email == null || email.isEmpty) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-      _info = null;
-    });
-    try {
-      await _auth.recoverPassword(email: email);
-      if (!mounted) return;
-      setState(() {
-        _info = 'Password reset email sent if the account exists.';
-      });
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    await _authCubit.recoverPassword(email: email);
   }
 
-  void _onSocialTap(String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$provider sign-in coming soon.')),
-    );
+  Future<void> _onGoogleTap() async {
+    await _authCubit.loginWithGoogle(apiClient: context.read<ApiClient>());
+    if (!mounted) return;
+    if (_authCubit.state.success) {
+      context.go('/dashboard');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!AppEnv.hasSupabaseAuthConfig) {
-      return Scaffold(
+    return BlocBuilder<AuthCubit, AuthState>(
+      builder: (context, authState) => Scaffold(
+        backgroundColor: AppColors.background,
         body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Supabase auth is not configured.\nSet SUPABASE_URL and SUPABASE_ANON_KEY.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Logo ──────────────────────────────────────────────────────
-              Center(
-                child: SvgPicture.asset(
-                  'assets/landing logo.svg',
-                  height: 100,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Logo ──────────────────────────────────────────────────────
+                Center(
+                  child: SvgPicture.asset(
+                    'assets/landing logo.svg',
+                    height: 100,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // ── Heading card ──────────────────────────────────────────────
-              _SectionCard(
-                child: _isLogin ? _LoginHeading() : _SignupHeading(),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Form card ─────────────────────────────────────────────────
-              _SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Error / info banners
-                    if (_error != null) ...[
-                      _StatusBanner(message: _error!, isError: true),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_info != null) ...[
-                      _StatusBanner(message: _info!, isError: false),
-                      const SizedBox(height: 12),
-                    ],
-
-                    if (_isLogin)
-                      _LoginForm(
-                        emailController: _loginEmail,
-                        passwordController: _loginPassword,
-                        passwordVisible: _loginPasswordVisible,
-                        rememberMe: _loginRememberMe,
-                        busy: _busy,
-                        onTogglePassword: () => setState(
-                            () => _loginPasswordVisible = !_loginPasswordVisible),
-                        onRememberMe: (v) =>
-                            setState(() => _loginRememberMe = v ?? false),
-                        onForgotPassword: _openForgotPassword,
-                        onSubmit: _doLogin,
-                      )
-                    else
-                      _SignupForm(
-                        nameController: _signupName,
-                        emailController: _signupEmail,
-                        passwordController: _signupPassword,
-                        passwordVisible: _signupPasswordVisible,
-                        acceptTerms: _signupAcceptTerms,
-                        busy: _busy,
-                        onTogglePassword: () => setState(() =>
-                            _signupPasswordVisible = !_signupPasswordVisible),
-                        onAcceptTerms: (v) =>
-                            setState(() => _signupAcceptTerms = v ?? false),
-                        onSubmit: _doSignup,
-                      ),
-                  ],
+                // ── Heading card ──────────────────────────────────────────────
+                _SectionCard(
+                  child: _isLogin ? _LoginHeading() : _SignupHeading(),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // ── Social login card ─────────────────────────────────────────
-              _SectionCard(
-                child: Column(
-                  children: [
-                    _OrDivider(label: _isLogin ? 'Or Login with' : 'Or Signup with'),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SocialButton(
-                            label: 'Google',
-                            icon: _GoogleIcon(),
-                            onTap: () => _onSocialTap('Google'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _SocialButton(
-                            label: 'Facebook',
-                            icon: _FacebookIcon(),
-                            onTap: () => _onSocialTap('Facebook'),
-                          ),
-                        ),
+                // ── Form card ─────────────────────────────────────────────────
+                _SectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Error / info banners
+                      if (authState.error != null) ...[
+                        _StatusBanner(message: authState.error!, isError: true),
+                        const SizedBox(height: 12),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SwitchModeText(
-                      isLogin: _isLogin,
-                      onSwitch: _switchMode,
-                    ),
-                  ],
+                      if (authState.info != null) ...[
+                        _StatusBanner(message: authState.info!, isError: false),
+                        const SizedBox(height: 12),
+                      ],
+
+                      if (_isLogin)
+                        _LoginForm(
+                          emailController: _loginEmail,
+                          passwordController: _loginPassword,
+                          passwordVisible: _loginPasswordVisible,
+                          rememberMe: _loginRememberMe,
+                          busy: authState.busy,
+                          onTogglePassword: () => setState(
+                            () =>
+                                _loginPasswordVisible = !_loginPasswordVisible,
+                          ),
+                          onRememberMe: (v) =>
+                              setState(() => _loginRememberMe = v ?? false),
+                          onForgotPassword: _openForgotPassword,
+                          onSubmit: _doLogin,
+                        )
+                      else
+                        _SignupForm(
+                          nameController: _signupName,
+                          emailController: _signupEmail,
+                          passwordController: _signupPassword,
+                          passwordVisible: _signupPasswordVisible,
+                          acceptTerms: _signupAcceptTerms,
+                          busy: authState.busy,
+                          onTogglePassword: () => setState(
+                            () => _signupPasswordVisible =
+                                !_signupPasswordVisible,
+                          ),
+                          onAcceptTerms: (v) =>
+                              setState(() => _signupAcceptTerms = v ?? false),
+                          onSubmit: _doSignup,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+
+                // ── Social login card ─────────────────────────────────────────
+                _SectionCard(
+                  child: Column(
+                    children: [
+                      _OrDivider(
+                        label: _isLogin ? 'Or Login with' : 'Or Signup with',
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _SocialButton(
+                              label: 'Google',
+                              icon: _GoogleIcon(),
+                              onTap: authState.busy ? () {} : _onGoogleTap,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _SocialButton(
+                              label: 'Facebook',
+                              icon: _FacebookIcon(),
+                              onTap: () =>
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Facebook sign-in coming soon.',
+                                      ),
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _SwitchModeText(isLogin: _isLogin, onSwitch: _switchMode),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -306,9 +240,9 @@ class _LoginHeading extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Login to your account below',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
       ],
     );
@@ -321,16 +255,13 @@ class _SignupHeading extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Signup',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
+        Text('Signup', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 4),
         Text(
           'Enter your details below to create your account.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
       ],
     );
@@ -434,11 +365,7 @@ class _LoginForm extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        _PrimaryButton(
-          label: 'Login',
-          busy: busy,
-          onPressed: onSubmit,
-        ),
+        _PrimaryButton(label: 'Login', busy: busy, onPressed: onSubmit),
       ],
     );
   }
@@ -562,11 +489,7 @@ class _SignupForm extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        _PrimaryButton(
-          label: 'Signup',
-          busy: busy,
-          onPressed: onSubmit,
-        ),
+        _PrimaryButton(label: 'Signup', busy: busy, onPressed: onSubmit),
       ],
     );
   }
@@ -594,9 +517,9 @@ class _ForgotPasswordDialog extends StatelessWidget {
         children: [
           Text(
             'Enter your email address and we\'ll send you a reset link.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 16),
           _AppTextField(
@@ -614,8 +537,7 @@ class _ForgotPasswordDialog extends StatelessWidget {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () =>
-              Navigator.of(context).pop(controller.text.trim()),
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
           child: const Text('Send Reset Link'),
         ),
       ],
@@ -707,8 +629,10 @@ class _AppTextField extends StatelessWidget {
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: suffixIcon,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -788,9 +712,7 @@ class _SocialButton extends StatelessWidget {
         foregroundColor: AppColors.textPrimary,
         side: const BorderSide(color: AppColors.border),
         padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -899,13 +821,10 @@ class _GooglePainter extends CustomPainter {
     final path1 = Path()
       ..moveTo(10 * s, 4.18 * s)
       ..lineTo(12.9 * s, 4.18 * s)
-      ..cubicTo(
-          14.13 * s, 4.18 * s, 15.25 * s, 4.62 * s, 16.13 * s, 5.37 * s)
+      ..cubicTo(14.13 * s, 4.18 * s, 15.25 * s, 4.62 * s, 16.13 * s, 5.37 * s)
       ..lineTo(18.59 * s, 2.91 * s)
-      ..cubicTo(
-          16.98 * s, 1.37 * s, 14.62 * s, 0.36 * s, 12 * s, 0.36 * s)
-      ..cubicTo(
-          7.99 * s, 0.36 * s, 4.6 * s, 2.75 * s, 3.01 * s, 6.17 * s)
+      ..cubicTo(16.98 * s, 1.37 * s, 14.62 * s, 0.36 * s, 12 * s, 0.36 * s)
+      ..cubicTo(7.99 * s, 0.36 * s, 4.6 * s, 2.75 * s, 3.01 * s, 6.17 * s)
       ..lineTo(5.95 * s, 8.47 * s)
       ..cubicTo(6.58 * s, 6.08 * s, 8.1 * s, 4.18 * s, 10 * s, 4.18 * s)
       ..close();
@@ -920,7 +839,13 @@ class _GooglePainter extends CustomPainter {
       ..lineTo(10 * s, 11.85 * s)
       ..lineTo(15.44 * s, 11.85 * s)
       ..cubicTo(
-          15.18 * s, 13.12 * s, 14.48 * s, 14.19 * s, 13.45 * s, 14.93 * s)
+        15.18 * s,
+        13.12 * s,
+        14.48 * s,
+        14.19 * s,
+        13.45 * s,
+        14.93 * s,
+      )
       ..lineTo(16.35 * s, 17.1 * s)
       ..cubicTo(18.22 * s, 15.36 * s, 19.64 * s, 12.91 * s, 19.64 * s, 10.2 * s)
       ..close();
@@ -945,8 +870,7 @@ class _GooglePainter extends CustomPainter {
       ..moveTo(10 * s, 19.64 * s)
       ..cubicTo(12.67 * s, 19.64 * s, 14.9 * s, 18.77 * s, 16.35 * s, 17.1 * s)
       ..lineTo(13.45 * s, 14.93 * s)
-      ..cubicTo(
-          12.62 * s, 15.48 * s, 11.38 * s, 15.82 * s, 10 * s, 15.82 * s)
+      ..cubicTo(12.62 * s, 15.48 * s, 11.38 * s, 15.82 * s, 10 * s, 15.82 * s)
       ..cubicTo(8.1 * s, 15.82 * s, 6.58 * s, 13.92 * s, 5.95 * s, 11.53 * s)
       ..lineTo(3.01 * s, 13.83 * s)
       ..cubicTo(4.6 * s, 17.25 * s, 7.99 * s, 19.64 * s, 10 * s, 19.64 * s)

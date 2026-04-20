@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/app/session/staff_auth.dart';
-import 'package:funeralface_mobile/core/env.dart';
+import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/features/auth/supabase_auth_service.dart';
+import 'package:funeralface_mobile/services/auth_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -45,7 +43,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final t = v?.trim() ?? '';
     if (t.isEmpty) return null;
     final u = Uri.tryParse(t);
-    if (u == null || !u.hasScheme || (u.scheme != 'https' && u.scheme != 'http')) {
+    if (u == null ||
+        !u.hasScheme ||
+        (u.scheme != 'https' && u.scheme != 'http')) {
       return 'Enter a valid http(s) URL';
     }
     return null;
@@ -77,10 +77,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _error = null;
     });
     try {
-      final data = await context
-          .read<AppRepositories>()
-          .settings
-          .getSettings(bearerToken: token);
+      final data = await context.read<AppRepositories>().settings.getSettings(
+        bearerToken: token,
+      );
       if (!mounted) return;
       setState(() {
         _name.text = data['funeral_home_name']?.toString() ?? '';
@@ -105,38 +104,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (token == null) return;
     setState(() => _saving = true);
     try {
-      await context.read<AppRepositories>().settings.updateSettings(
-        {
-          'funeral_home_name': _name.text.trim(),
-          'funeral_home_phone': _phone.text.trim(),
-          'funeral_home_address': _address.text.trim(),
-          'logo_url': _logoUrl.text.trim().isEmpty
-              ? null
-              : _logoUrl.text.trim(),
-          'default_message': _defaultMessage.text.trim().isEmpty
-              ? null
-              : _defaultMessage.text.trim(),
-        },
-        bearerToken: token,
-      );
+      await context.read<AppRepositories>().settings.updateSettings({
+        'funeral_home_name': _name.text.trim(),
+        'funeral_home_phone': _phone.text.trim(),
+        'funeral_home_address': _address.text.trim(),
+        'logo_url': _logoUrl.text.trim().isEmpty ? null : _logoUrl.text.trim(),
+        'default_message': _defaultMessage.text.trim().isEmpty
+            ? null
+            : _defaultMessage.text.trim(),
+      }, bearerToken: token);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Settings saved')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Settings saved')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
   Future<void> _signOut() async {
-    if (!AppEnv.hasSupabaseAuthConfig) return;
     final ok = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -145,13 +141,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (ok != true || !mounted) return;
     setState(() => _signOutBusy = true);
     try {
-      await SupabaseAuthService(Supabase.instance.client).logout();
+      await AuthServices(apiClient: context.read<ApiClient>()).logout();
       if (!mounted) return;
       context.go('/auth');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _signOutBusy = false);
     }
@@ -176,36 +173,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: token == null
                   ? _MessageState(
-                      message: 'Please sign in to load and edit settings.')
+                      message: 'Please sign in to load and edit settings.',
+                    )
                   : _loading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.primary),
-                        )
-                      : _error != null
-                          ? _ErrorState(
-                              error: _error!,
-                              onRetry: _load,
-                              onSignOut: AppEnv.hasSupabaseAuthConfig
-                                  ? _signOut
-                                  : null,
-                              signOutBusy: _signOutBusy,
-                            )
-                          : _FormBody(
-                              formKey: _formKey,
-                              nameController: _name,
-                              phoneController: _phone,
-                              addressController: _address,
-                              logoUrlController: _logoUrl,
-                              defaultMessageController: _defaultMessage,
-                              validateUrl: _validateHttpUrl,
-                              saving: _saving,
-                              signOutBusy: _signOutBusy,
-                              onSave: _save,
-                              onSignOut: AppEnv.hasSupabaseAuthConfig
-                                  ? _signOut
-                                  : null,
-                            ),
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : _error != null
+                  ? _ErrorState(
+                      error: _error!,
+                      onRetry: _load,
+                      onSignOut: _signOut,
+                      signOutBusy: _signOutBusy,
+                    )
+                  : _FormBody(
+                      formKey: _formKey,
+                      nameController: _name,
+                      phoneController: _phone,
+                      addressController: _address,
+                      logoUrlController: _logoUrl,
+                      defaultMessageController: _defaultMessage,
+                      validateUrl: _validateHttpUrl,
+                      saving: _saving,
+                      signOutBusy: _signOutBusy,
+                      onSave: _save,
+                      onSignOut: _signOut,
+                    ),
             ),
           ],
         ),
@@ -246,8 +241,11 @@ class _HeaderCard extends StatelessWidget {
                   border: Border.all(color: AppColors.border),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                    size: 16, color: AppColors.textPrimary),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: AppColors.textPrimary,
+                ),
               ),
             )
           else
@@ -379,7 +377,9 @@ class _FormBody extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: 'Write here ...',
                     hintStyle: GoogleFonts.poppins(
-                        color: AppColors.textSecondary, fontSize: 14),
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
                     contentPadding: const EdgeInsets.all(14),
                   ),
                 ),
@@ -399,7 +399,9 @@ class _FormBody extends StatelessWidget {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Save'),
             ),
@@ -415,8 +417,8 @@ class _FormBody extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.statusCancelledFg,
                   side: BorderSide(
-                      color: AppColors.statusCancelledFg
-                          .withValues(alpha: 0.4)),
+                    color: AppColors.statusCancelledFg.withValues(alpha: 0.4),
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -478,8 +480,10 @@ class _SettingsField extends StatelessWidget {
               padding: const EdgeInsets.only(left: 12, right: 8),
               child: Icon(icon, color: AppColors.accent, size: 18),
             ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 0, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0,
+              minHeight: 0,
+            ),
           ),
         ),
       ],
@@ -539,13 +543,18 @@ class _LogoPreview extends StatelessWidget {
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => Row(
                 children: [
-                  Icon(Icons.broken_image_outlined,
-                      color: AppColors.statusCancelledFg, size: 20),
+                  Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.statusCancelledFg,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Could not load image',
                     style: GoogleFonts.poppins(
-                        fontSize: 13, color: AppColors.textSecondary),
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -589,38 +598,42 @@ class _SignOutModal extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: const BoxDecoration(
-                    color: AppColors.accentSurface, shape: BoxShape.circle),
+                  color: AppColors.accentSurface,
+                  shape: BoxShape.circle,
+                ),
               ),
               Container(
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.2),
-                    shape: BoxShape.circle),
+                  color: AppColors.accent.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
               ),
               Container(
                 width: 44,
                 height: 44,
                 decoration: const BoxDecoration(
-                    color: AppColors.accent, shape: BoxShape.circle),
-                child: const Icon(Icons.logout_rounded,
-                    color: Colors.white, size: 22),
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          Text(
-            'Sign out?',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('Sign out?', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(
             'You will need to sign in again to use staff features.',
             textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -637,8 +650,7 @@ class _SignOutModal extends StatelessWidget {
             height: 52,
             child: FilledButton(
               onPressed: () => Navigator.of(context).pop(false),
-              style:
-                  FilledButton.styleFrom(backgroundColor: AppColors.accent),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
               child: const Text('Cancel'),
             ),
           ),
@@ -682,7 +694,9 @@ class _ErrorState extends StatelessWidget {
                 error,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
-                    fontSize: 13, color: AppColors.statusCancelledFg),
+                  fontSize: 13,
+                  color: AppColors.statusCancelledFg,
+                ),
               ),
               const SizedBox(height: 16),
               FilledButton(onPressed: onRetry, child: const Text('Retry')),
@@ -693,10 +707,11 @@ class _ErrorState extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.statusCancelledFg,
                     side: BorderSide(
-                        color: AppColors.statusCancelledFg
-                            .withValues(alpha: 0.4)),
+                      color: AppColors.statusCancelledFg.withValues(alpha: 0.4),
+                    ),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text('Sign out'),
                 ),

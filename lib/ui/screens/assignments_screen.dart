@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
 import 'package:funeralface_mobile/core/widgets/app_status_chip.dart';
-import 'package:funeralface_mobile/features/assignments/assignments_repository.dart';
+import 'package:funeralface_mobile/services/assignments_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class AssignmentsScreen extends StatefulWidget {
   const AssignmentsScreen({super.key});
@@ -88,24 +88,25 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     setState(() => _submitting = true);
     try {
       await context.read<AppRepositories>().assignments.updateAssignment(
-            assignmentId: assignmentId,
-            payload: {'status': status},
-            bearerToken: token,
-          );
+        assignmentId: assignmentId,
+        payload: {'status': status},
+        bearerToken: token,
+      );
       await _refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Status updated to ${statusLabel(status)}')),
+        SnackBar(content: Text('Status updated to ${statusLabel(status)}')),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -116,9 +117,8 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _CreateAssignmentSheet(
-        repositories: context.read<AppRepositories>(),
-      ),
+      builder: (_) =>
+          _CreateAssignmentSheet(repositories: context.read<AppRepositories>()),
     );
     if (created == true) await _refresh();
   }
@@ -170,7 +170,11 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                         color: AppColors.accent,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 22),
+                      child: const Icon(
+                        Icons.add,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ],
@@ -186,10 +190,15 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                 style: GoogleFonts.poppins(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Search ...',
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: AppColors.textSecondary, size: 20),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   filled: true,
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
@@ -202,8 +211,10 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide:
-                        const BorderSide(color: AppColors.primary, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: AppColors.primary,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -230,7 +241,8 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                               ConnectionState.waiting) {
                             return const Center(
                               child: CircularProgressIndicator(
-                                  color: AppColors.primary),
+                                color: AppColors.primary,
+                              ),
                             );
                           }
                           if (snapshot.hasError) {
@@ -249,13 +261,11 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                             itemCount: _filtered.length,
                             itemBuilder: (context, i) {
-                              final m =
-                                  _filtered[i] as Map<String, dynamic>;
+                              final m = _filtered[i] as Map<String, dynamic>;
                               final id = m['id']?.toString() ?? '';
                               final isExpanded = _expanded.contains(id);
                               return Padding(
-                                padding:
-                                    const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.only(bottom: 10),
                                 child: _AssignmentCard(
                                   data: m,
                                   isExpanded: isExpanded,
@@ -270,11 +280,13 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                                   onTap: id.isEmpty
                                       ? null
                                       : () => context.push(
-                                            '/assignments/$id',
-                                            extra: m,
-                                          ),
+                                          '/assignments/$id',
+                                          extra: m,
+                                        ),
                                   onStatusChange: (s) => _changeStatus(
-                                      assignmentId: id, status: s),
+                                    assignmentId: id,
+                                    status: s,
+                                  ),
                                 ),
                               );
                             },
@@ -318,11 +330,11 @@ class _AssignmentCard extends StatelessWidget {
     final status = data['status']?.toString() ?? '';
     final initials = name.trim().isNotEmpty
         ? name
-            .trim()
-            .split(' ')
-            .map((w) => w.isNotEmpty ? w[0] : '')
-            .take(2)
-            .join()
+              .trim()
+              .split(' ')
+              .map((w) => w.isNotEmpty ? w[0] : '')
+              .take(2)
+              .join()
         : '?';
 
     return GestureDetector(
@@ -383,8 +395,11 @@ class _AssignmentCard extends StatelessWidget {
                           const SizedBox(height: 3),
                           Row(
                             children: [
-                              const Icon(Icons.location_on_rounded,
-                                  size: 13, color: AppColors.accent),
+                              const Icon(
+                                Icons.location_on_rounded,
+                                size: 13,
+                                color: AppColors.accent,
+                              ),
                               const SizedBox(width: 2),
                               Expanded(
                                 child: Text(
@@ -413,8 +428,11 @@ class _AssignmentCard extends StatelessWidget {
                       child: AnimatedRotation(
                         turns: isExpanded ? 0 : 0.5,
                         duration: const Duration(milliseconds: 200),
-                        child: const Icon(Icons.keyboard_arrow_up_rounded,
-                            color: AppColors.accent, size: 24),
+                        child: const Icon(
+                          Icons.keyboard_arrow_up_rounded,
+                          color: AppColors.accent,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),
@@ -426,8 +444,10 @@ class _AssignmentCard extends StatelessWidget {
               // ── Contact row ──────────────────────────────────────────────
               Container(
                 margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.statusEnRouteBg,
                   borderRadius: BorderRadius.circular(10),
@@ -437,12 +457,16 @@ class _AssignmentCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color:
-                            AppColors.statusEnRouteFg.withValues(alpha: 0.12),
+                        color: AppColors.statusEnRouteFg.withValues(
+                          alpha: 0.12,
+                        ),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Icon(Icons.phone_outlined,
-                          size: 14, color: AppColors.statusEnRouteFg),
+                      child: const Icon(
+                        Icons.phone_outlined,
+                        size: 14,
+                        color: AppColors.statusEnRouteFg,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -474,7 +498,7 @@ class _AssignmentCard extends StatelessWidget {
                 child: Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: AssignmentsRepository.statuses.map((s) {
+                  children: AssignmentsServices.statuses.map((s) {
                     final isCurrent = s == status;
                     return GestureDetector(
                       onTap: submitting || isCurrent
@@ -495,8 +519,11 @@ class _AssignmentCard extends StatelessWidget {
                                   color: AppColors.primary,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.check,
-                                    color: Colors.white, size: 10),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 10,
+                                ),
                               ),
                             ),
                         ],
@@ -510,16 +537,21 @@ class _AssignmentCard extends StatelessWidget {
               if (contactName.isNotEmpty || contactPhone.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.statusEnRouteBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.phone_outlined,
-                          size: 14, color: AppColors.statusEnRouteFg),
+                      const Icon(
+                        Icons.phone_outlined,
+                        size: 14,
+                        color: AppColors.statusEnRouteFg,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Contact',
@@ -559,8 +591,7 @@ class _CreateAssignmentSheet extends StatefulWidget {
   final AppRepositories repositories;
 
   @override
-  State<_CreateAssignmentSheet> createState() =>
-      _CreateAssignmentSheetState();
+  State<_CreateAssignmentSheet> createState() => _CreateAssignmentSheetState();
 }
 
 class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
@@ -603,17 +634,19 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
       );
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Assignment created')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Assignment created')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -627,7 +660,10 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 2),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.3),
+          width: 2,
+        ),
       ),
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(20, 24, 20, 20 + bottom),
@@ -718,7 +754,9 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Create'),
                 ),
@@ -789,8 +827,10 @@ class _SheetField extends StatelessWidget {
               padding: const EdgeInsets.only(left: 12, right: 8),
               child: Icon(icon, color: AppColors.accent, size: 18),
             ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 0, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0,
+              minHeight: 0,
+            ),
           ),
         ),
       ],
@@ -812,19 +852,16 @@ class _EmptyBody extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            hasSearch
-                ? Icons.search_off_rounded
-                : Icons.assignment_outlined,
+            hasSearch ? Icons.search_off_rounded : Icons.assignment_outlined,
             size: 56,
             color: AppColors.border,
           ),
           const SizedBox(height: 12),
           Text(
             hasSearch ? 'No results found' : 'No assignments yet',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -856,13 +893,12 @@ class _ErrorBody extends StatelessWidget {
               Text(
                 message,
                 style: GoogleFonts.poppins(
-                    fontSize: 13, color: AppColors.statusCancelledFg),
+                  fontSize: 13,
+                  color: AppColors.statusCancelledFg,
+                ),
               ),
               const SizedBox(height: 12),
-              FilledButton(
-                onPressed: onRetry,
-                child: const Text('Retry'),
-              ),
+              FilledButton(onPressed: onRetry, child: const Text('Retry')),
             ],
           ),
         ),

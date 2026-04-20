@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/app/session/auth_session.dart';
-import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/features/session/auth_session.dart';
+import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
 import 'package:funeralface_mobile/core/widgets/app_status_chip.dart';
-import 'package:funeralface_mobile/features/auth/backend_provision.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_usecase.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:funeralface_mobile/services/auth_services.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});

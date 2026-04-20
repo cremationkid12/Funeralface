@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/app/session/staff_auth.dart';
+import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/features/staff/staff_repository.dart';
+import 'package:funeralface_mobile/services/staff_services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 class StaffDetailScreen extends StatefulWidget {
   const StaffDetailScreen({
@@ -33,14 +33,16 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   void initState() {
     super.initState();
     _name = TextEditingController(
-        text: widget.initial['name']?.toString() ?? '');
+      text: widget.initial['name']?.toString() ?? '',
+    );
     _phone = TextEditingController(
-        text: widget.initial['phone']?.toString() ?? '');
+      text: widget.initial['phone']?.toString() ?? '',
+    );
     _email = TextEditingController(
-        text: widget.initial['email']?.toString() ?? '');
+      text: widget.initial['email']?.toString() ?? '',
+    );
     final r = widget.initial['role']?.toString();
-    _role =
-        r != null && StaffRepository.roles.contains(r) ? r : 'user';
+    _role = r != null && StaffServices.roles.contains(r) ? r : 'user';
     final a = widget.initial['active'];
     _active = a is bool ? a : a?.toString().toLowerCase() != 'false';
   }
@@ -65,23 +67,26 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
         'active': _active,
         'email': _email.text.trim().isEmpty ? null : _email.text.trim(),
       };
-      final updated = await context
-          .read<AppRepositories>()
-          .staff
-          .updateStaff(
-              id: widget.staffId, payload: payload, bearerToken: token);
+      final updated = await context.read<AppRepositories>().staff.updateStaff(
+        id: widget.staffId,
+        payload: payload,
+        bearerToken: token,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Staff member saved')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Staff member saved')));
       Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -103,31 +108,32 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
     try {
       final Map<String, dynamic> updated;
       if (next) {
-        updated = await context
-            .read<AppRepositories>()
-            .staff
-            .activateStaff(id: widget.staffId, bearerToken: token);
+        updated = await context.read<AppRepositories>().staff.activateStaff(
+          id: widget.staffId,
+          bearerToken: token,
+        );
       } else {
-        updated = await context
-            .read<AppRepositories>()
-            .staff
-            .deactivateStaff(id: widget.staffId, bearerToken: token);
+        updated = await context.read<AppRepositories>().staff.deactivateStaff(
+          id: widget.staffId,
+          bearerToken: token,
+        );
       }
       if (!mounted) return;
       setState(() => _active = next);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(next ? 'Staff activated' : 'Staff deactivated')),
+        SnackBar(content: Text(next ? 'Staff activated' : 'Staff deactivated')),
       );
       Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -145,23 +151,25 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
     if (token == null) return;
     setState(() => _busy = true);
     try {
-      await context
-          .read<AppRepositories>()
-          .staff
-          .deleteStaff(id: widget.staffId, bearerToken: token);
+      await context.read<AppRepositories>().staff.deleteStaff(
+        id: widget.staffId,
+        bearerToken: token,
+      );
       if (!mounted) return;
-      Navigator.of(context)
-          .pop({'deleted': true, 'id': widget.staffId});
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Staff member removed')));
+      Navigator.of(context).pop({'deleted': true, 'id': widget.staffId});
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Staff member removed')));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -190,7 +198,9 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   Widget build(BuildContext context) {
     final token = staffBearerToken();
     final name = _name.text.isNotEmpty ? _name.text : '?';
-    final initials = name.trim().split(' ')
+    final initials = name
+        .trim()
+        .split(' ')
         .map((w) => w.isNotEmpty ? w[0] : '')
         .take(2)
         .join()
@@ -205,8 +215,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
             // ── Header card ───────────────────────────────────────────────
             Container(
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
@@ -230,8 +239,11 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                         border: Border.all(color: AppColors.border),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          size: 16, color: AppColors.textPrimary),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                   Expanded(
@@ -255,10 +267,15 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                           ? const Padding(
                               padding: EdgeInsets.all(10),
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
-                          : const Icon(Icons.check_rounded,
-                              color: Colors.white, size: 20),
+                          : const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                     ),
                   ),
                 ],
@@ -305,11 +322,13 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.primary,
                               shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: Colors.white, width: 2),
+                              border: Border.all(color: Colors.white, width: 2),
                             ),
-                            child: const Icon(Icons.camera_alt_rounded,
-                                color: Colors.white, size: 13),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              color: Colors.white,
+                              size: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -349,25 +368,33 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                       DropdownButtonFormField<String>(
                         initialValue: _role,
                         style: GoogleFonts.poppins(
-                            fontSize: 14, color: AppColors.textPrimary),
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
                         decoration: InputDecoration(
                           prefixIcon: Padding(
-                            padding:
-                                const EdgeInsets.only(left: 12, right: 8),
-                            child: const Icon(Icons.work_outline_rounded,
-                                color: AppColors.accent, size: 18),
+                            padding: const EdgeInsets.only(left: 12, right: 8),
+                            child: const Icon(
+                              Icons.work_outline_rounded,
+                              color: AppColors.accent,
+                              size: 18,
+                            ),
                           ),
                           prefixIconConstraints: const BoxConstraints(
-                              minWidth: 0, minHeight: 0),
+                            minWidth: 0,
+                            minHeight: 0,
+                          ),
                         ),
-                        items: StaffRepository.roles
-                            .map((r) => DropdownMenuItem<String>(
-                                  value: r,
-                                  child: Text(
-                                      r[0].toUpperCase() + r.substring(1),
-                                      style: GoogleFonts.poppins(
-                                          fontSize: 14)),
-                                ))
+                        items: StaffServices.roles
+                            .map(
+                              (r) => DropdownMenuItem<String>(
+                                value: r,
+                                child: Text(
+                                  r[0].toUpperCase() + r.substring(1),
+                                  style: GoogleFonts.poppins(fontSize: 14),
+                                ),
+                              ),
+                            )
                             .toList(),
                         onChanged: _busy
                             ? null
@@ -382,7 +409,9 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                   // ── Active toggle card ───────────────────────────────────
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
@@ -417,9 +446,9 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                     child: FilledButton.icon(
                       onPressed: _busy ? null : _confirmDelete,
                       style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent),
-                      icon: const Icon(Icons.delete_outline_rounded,
-                          size: 18),
+                        backgroundColor: AppColors.accent,
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
                       label: const Text('Remove Staff Member'),
                     ),
                   ),
@@ -487,8 +516,7 @@ class _ConfirmModal extends StatelessWidget {
                   color: AppColors.accent,
                   shape: BoxShape.circle,
                 ),
-                child:
-                    Icon(icon, color: Colors.white, size: 22),
+                child: Icon(icon, color: Colors.white, size: 22),
               ),
             ],
           ),
@@ -502,10 +530,9 @@ class _ConfirmModal extends StatelessWidget {
           Text(
             body,
             textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -522,8 +549,7 @@ class _ConfirmModal extends StatelessWidget {
             height: 52,
             child: FilledButton(
               onPressed: () => Navigator.of(context).pop(false),
-              style:
-                  FilledButton.styleFrom(backgroundColor: AppColors.accent),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
               child: const Text('Cancel'),
             ),
           ),
@@ -595,8 +621,10 @@ class _DetailField extends StatelessWidget {
               padding: const EdgeInsets.only(left: 12, right: 8),
               child: Icon(icon, color: AppColors.accent, size: 18),
             ),
-            prefixIconConstraints:
-                const BoxConstraints(minWidth: 0, minHeight: 0),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0,
+              minHeight: 0,
+            ),
           ),
         ),
       ],

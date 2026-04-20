@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:funeralface_mobile/app/session/auth_session.dart';
+import 'package:funeralface_mobile/features/session/auth_session.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
