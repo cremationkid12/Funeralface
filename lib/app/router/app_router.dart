@@ -1,14 +1,14 @@
-import 'package:funeralface_mobile/ui/screens/assignments_screen.dart';
-import 'package:funeralface_mobile/ui/screens/assignment_detail_screen.dart';
-import 'package:funeralface_mobile/ui/screens/auth_screen.dart';
+import 'package:funeralface_mobile/ui/screens/assignments/assignments_screen.dart';
+import 'package:funeralface_mobile/ui/screens/assignments/assignment_detail_screen.dart';
+import 'package:funeralface_mobile/ui/screens/auth/auth_screen.dart';
 import 'package:funeralface_mobile/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:funeralface_mobile/features/session/auth_session.dart';
-import 'package:funeralface_mobile/ui/screens/family_assignment_screen.dart';
-import 'package:funeralface_mobile/ui/screens/settings_screen.dart';
+import 'package:funeralface_mobile/ui/screens/assignments/family_assignment_screen.dart';
+import 'package:funeralface_mobile/ui/screens/settings/settings_screen.dart';
 import 'package:funeralface_mobile/ui/screens/splash/splash_screen.dart';
-import 'package:funeralface_mobile/ui/screens/staff_detail_screen.dart';
-import 'package:funeralface_mobile/ui/screens/staff_screen.dart';
-import 'package:funeralface_mobile/shell/main_shell.dart';
+import 'package:funeralface_mobile/ui/screens/staff/staff_detail_screen.dart';
+import 'package:funeralface_mobile/ui/screens/staff/staff_screen.dart';
+import 'package:funeralface_mobile/ui/screens/main_shell.dart';
 import 'package:go_router/go_router.dart';
 
 /// Staff shell routes + family deep-link route (`/family/:token`).

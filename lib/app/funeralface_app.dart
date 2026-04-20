@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/features/auth/auth_cubit.dart';
+import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
 import 'package:funeralface_mobile/services/auth_services.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +23,10 @@ class FuneralfaceApp extends StatelessWidget {
             authServices: AuthServices(apiClient: context.read<ApiClient>()),
             googleSignIn: GoogleSignIn.instance,
           ),
+        ),
+        BlocProvider<StaffCubit>(
+          create: (context) =>
+              StaffCubit(staffServices: context.read<AppRepositories>().staff),
         ),
       ],
       child: MaterialApp.router(
