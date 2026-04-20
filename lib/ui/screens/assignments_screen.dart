@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
+import 'package:funeralface_mobile/features/assignments/assignments_state.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/core/widgets/app_status_chip.dart';
+import 'package:funeralface_mobile/ui/widgets/app_status_chip.dart';
 import 'package:funeralface_mobile/services/assignments_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -17,66 +19,37 @@ class AssignmentsScreen extends StatefulWidget {
 }
 
 class _AssignmentsScreenState extends State<AssignmentsScreen> {
-  Future<List<dynamic>>? _future;
-  List<dynamic> _allItems = [];
-  List<dynamic> _filtered = [];
-  String _searchQuery = '';
-  bool _depsReady = false;
-  bool _submitting = false;
-
-  // Tracks which card indices are expanded
-  final Set<String> _expanded = {};
+  late final AssignmentsCubit _assignmentsCubit;
 
   final _searchController = TextEditingController();
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_depsReady) {
-      _depsReady = true;
-      _future = _load();
+  void initState() {
+    super.initState();
+    _assignmentsCubit = AssignmentsCubit(
+      assignmentsServices: context.read<AppRepositories>().assignments,
+    );
+    final token = staffBearerToken();
+    if (token != null) {
+      _assignmentsCubit.load(bearerToken: token);
     }
   }
 
   @override
   void dispose() {
+    _assignmentsCubit.close();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<List<dynamic>> _load() async {
-    final result = await context
-        .read<AppRepositories>()
-        .assignments
-        .listAssignments(bearerToken: staffBearerToken());
-    setState(() {
-      _allItems = result;
-      _applySearch(_searchQuery);
-    });
-    return result;
-  }
-
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    final token = staffBearerToken();
+    if (token == null) return;
+    await _assignmentsCubit.refresh(bearerToken: token);
   }
 
   void _applySearch(String query) {
-    final q = query.toLowerCase().trim();
-    setState(() {
-      _searchQuery = query;
-      if (q.isEmpty) {
-        _filtered = List.of(_allItems);
-      } else {
-        _filtered = _allItems.where((m) {
-          final map = m as Map<String, dynamic>;
-          final name = (map['decedent_name'] ?? '').toString().toLowerCase();
-          final addr = (map['pickup_address'] ?? '').toString().toLowerCase();
-          final status = (map['status'] ?? '').toString().toLowerCase();
-          return name.contains(q) || addr.contains(q) || status.contains(q);
-        }).toList();
-      }
-    });
+    _assignmentsCubit.setSearchQuery(query);
   }
 
   Future<void> _changeStatus({
@@ -85,14 +58,12 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }) async {
     final token = staffBearerToken();
     if (token == null) return;
-    setState(() => _submitting = true);
     try {
-      await context.read<AppRepositories>().assignments.updateAssignment(
+      await _assignmentsCubit.updateStatus(
         assignmentId: assignmentId,
-        payload: {'status': status},
         bearerToken: token,
+        status: status,
       );
-      await _refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Status updated to ${statusLabel(status)}')),
@@ -107,8 +78,6 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -117,185 +86,152 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) =>
-          _CreateAssignmentSheet(repositories: context.read<AppRepositories>()),
+      builder: (_) => _CreateAssignmentSheet(
+        onCreate: (payload) async {
+          final token = staffBearerToken();
+          if (token == null) return;
+          await _assignmentsCubit.createAssignment(
+            payload: payload,
+            bearerToken: token,
+          );
+        },
+      ),
     );
-    if (created == true) await _refresh();
+    if (!mounted || created != true) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Assignment created')));
   }
 
   @override
   Widget build(BuildContext context) {
     final token = staffBearerToken();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Header card ──────────────────────────────────────────────
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+    return BlocProvider.value(
+      value: _assignmentsCubit,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: BlocBuilder<AssignmentsCubit, AssignmentsState>(
+            builder: (context, state) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── Header card ──────────────────────────────────────────────
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 40), // balance spacing
-                  Expanded(
-                    child: Text(
-                      'Assignments',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  // Orange + button
-                  GestureDetector(
-                    onTap: token == null || _submitting
-                        ? null
-                        : _openCreateSheet,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 40), // balance spacing
+                      Expanded(
+                        child: Text(
+                          'Assignments',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                      // Orange + button
+                      GestureDetector(
+                        onTap: token == null || state.submitting
+                            ? null
+                            : _openCreateSheet,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.accent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-            // ── Search bar ───────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: TextField(
-                controller: _searchController,
-                onChanged: _applySearch,
-                style: GoogleFonts.poppins(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Search ...',
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: AppColors.textSecondary,
-                    size: 20,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.primary,
-                      width: 1.5,
+                // ── Search bar ───────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _applySearch,
+                    style: GoogleFonts.poppins(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Search ...',
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
-            // ── List ─────────────────────────────────────────────────────
-            Expanded(
-              child: token == null
-                  ? Center(
-                      child: Text(
-                        'Please sign in to load assignments.',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _refresh,
-                      color: AppColors.primary,
-                      child: FutureBuilder<List<dynamic>>(
-                        future: _future,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
-                              ),
-                            );
-                          }
-                          if (snapshot.hasError) {
-                            return _ErrorBody(
-                              message: snapshot.error.toString(),
-                              onRetry: _refresh,
-                            );
-                          }
-                          if (_filtered.isEmpty) {
-                            return _EmptyBody(
-                              hasSearch: _searchQuery.isNotEmpty,
-                            );
-                          }
-                          return ListView.builder(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                            itemCount: _filtered.length,
-                            itemBuilder: (context, i) {
-                              final m = _filtered[i] as Map<String, dynamic>;
-                              final id = m['id']?.toString() ?? '';
-                              final isExpanded = _expanded.contains(id);
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: _AssignmentCard(
-                                  data: m,
-                                  isExpanded: isExpanded,
-                                  submitting: _submitting,
-                                  onToggle: () => setState(() {
-                                    if (isExpanded) {
-                                      _expanded.remove(id);
-                                    } else {
-                                      _expanded.add(id);
-                                    }
-                                  }),
-                                  onTap: id.isEmpty
-                                      ? null
-                                      : () => context.push(
-                                          '/assignments/$id',
-                                          extra: m,
-                                        ),
-                                  onStatusChange: (s) => _changeStatus(
-                                    assignmentId: id,
-                                    status: s,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
+                // ── List ─────────────────────────────────────────────────────
+                Expanded(
+                  child: token == null
+                      ? Center(
+                          child: Text(
+                            'Please sign in to load assignments.',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _refresh,
+                          color: AppColors.primary,
+                          child: _AssignmentsList(
+                            state: state,
+                            onRetry: _refresh,
+                            onToggleExpanded: _assignmentsCubit.toggleExpanded,
+                            onChangeStatus: _changeStatus,
+                            onAssignmentUpdated: _refresh,
+                          ),
+                        ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -304,12 +240,78 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
 
 // ── Assignment accordion card ──────────────────────────────────────────────────
 
+class _AssignmentsList extends StatelessWidget {
+  const _AssignmentsList({
+    required this.state,
+    required this.onRetry,
+    required this.onToggleExpanded,
+    required this.onChangeStatus,
+    required this.onAssignmentUpdated,
+  });
+
+  final AssignmentsState state;
+  final Future<void> Function() onRetry;
+  final ValueChanged<String> onToggleExpanded;
+  final Future<void> Function({
+    required String assignmentId,
+    required String status,
+  })
+  onChangeStatus;
+  final Future<void> Function() onAssignmentUpdated;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.busy) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+    if (state.error != null) {
+      return _ErrorBody(message: state.error!, onRetry: () => onRetry());
+    }
+    if (state.filteredItems.isEmpty) {
+      return _EmptyBody(hasSearch: state.searchQuery.isNotEmpty);
+    }
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      itemCount: state.filteredItems.length,
+      itemBuilder: (context, i) {
+        final m = state.filteredItems[i] as Map<String, dynamic>;
+        final id = m['id']?.toString() ?? '';
+        final isExpanded = state.expandedIds.contains(id);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _AssignmentCard(
+            data: m,
+            isExpanded: isExpanded,
+            submitting: state.submitting,
+            onToggle: id.isEmpty ? null : () => onToggleExpanded(id),
+            onTap: id.isEmpty
+                ? null
+                : () async {
+                    final changed = await context.push<bool>(
+                      '/assignments/$id',
+                      extra: m,
+                    );
+                    if (changed == true) {
+                      await onAssignmentUpdated();
+                    }
+                  },
+            onStatusChange: (s) => onChangeStatus(assignmentId: id, status: s),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _AssignmentCard extends StatelessWidget {
   const _AssignmentCard({
     required this.data,
     required this.isExpanded,
     required this.submitting,
-    required this.onToggle,
+    this.onToggle,
     required this.onStatusChange,
     this.onTap,
   });
@@ -317,7 +319,7 @@ class _AssignmentCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final bool isExpanded;
   final bool submitting;
-  final VoidCallback onToggle;
+  final VoidCallback? onToggle;
   final ValueChanged<String> onStatusChange;
   final VoidCallback? onTap;
 
@@ -366,7 +368,7 @@ class _AssignmentCard extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
                       child: Text(
@@ -387,7 +389,7 @@ class _AssignmentCard extends StatelessWidget {
                       children: [
                         Text(
                           name,
-                          style: Theme.of(context).textTheme.titleSmall,
+                          style: Theme.of(context).textTheme.titleMedium,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -446,7 +448,7 @@ class _AssignmentCard extends StatelessWidget {
                 margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
-                  vertical: 10,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.statusEnRouteBg,
@@ -454,19 +456,10 @@ class _AssignmentCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.statusEnRouteFg.withValues(
-                          alpha: 0.12,
-                        ),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Icon(
-                        Icons.phone_outlined,
-                        size: 14,
-                        color: AppColors.statusEnRouteFg,
-                      ),
+                    const Icon(
+                      Icons.phone_outlined,
+                      size: 14,
+                      color: AppColors.statusEnRouteFg,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -539,7 +532,7 @@ class _AssignmentCard extends StatelessWidget {
                   margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 8,
+                    vertical: 12,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.statusEnRouteBg,
@@ -586,9 +579,9 @@ class _AssignmentCard extends StatelessWidget {
 // ── Create assignment bottom sheet ─────────────────────────────────────────────
 
 class _CreateAssignmentSheet extends StatefulWidget {
-  const _CreateAssignmentSheet({required this.repositories});
+  const _CreateAssignmentSheet({required this.onCreate});
 
-  final AppRepositories repositories;
+  final Future<void> Function(Map<String, dynamic> payload) onCreate;
 
   @override
   State<_CreateAssignmentSheet> createState() => _CreateAssignmentSheetState();
@@ -621,22 +614,21 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
     if (token == null) return;
     setState(() => _submitting = true);
     try {
-      await widget.repositories.assignments.createAssignment(
-        bearerToken: token,
-        payload: {
-          'decedent_name': _decedentName.text.trim(),
-          'pickup_address': _pickupAddress.text.trim(),
-          'contact_name': _contactName.text.trim(),
-          'contact_phone': _contactPhone.text.trim(),
-          if (_eta.text.trim().isNotEmpty) 'notes': _eta.text.trim(),
-          if (_notes.text.trim().isNotEmpty) 'notes': _notes.text.trim(),
-        },
-      );
+      final eta = _eta.text.trim();
+      final notes = _notes.text.trim();
+      final combinedNotes = [
+        if (eta.isNotEmpty) 'ETA to removal: $eta',
+        if (notes.isNotEmpty) notes,
+      ].join('\n');
+      await widget.onCreate({
+        'decedent_name': _decedentName.text.trim(),
+        'pickup_address': _pickupAddress.text.trim(),
+        'contact_name': _contactName.text.trim(),
+        'contact_phone': _contactPhone.text.trim(),
+        if (combinedNotes.isNotEmpty) 'notes': combinedNotes,
+      });
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Assignment created')));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -656,7 +648,7 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
@@ -732,7 +724,7 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
               const SizedBox(height: 6),
               TextFormField(
                 controller: _notes,
-                maxLines: 4,
+                maxLines: 3,
                 style: GoogleFonts.poppins(fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Write here ...',

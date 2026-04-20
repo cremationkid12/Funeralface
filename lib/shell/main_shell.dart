@@ -31,9 +31,21 @@ class _AppNavBar extends StatelessWidget {
 
   static const _items = [
     _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home'),
-    _NavItem(icon: Icons.assignment_outlined, activeIcon: Icons.assignment, label: 'Assignments'),
-    _NavItem(icon: Icons.people_outline, activeIcon: Icons.people, label: 'Staff'),
-    _NavItem(icon: Icons.settings_outlined, activeIcon: Icons.settings, label: 'Settings'),
+    _NavItem(
+      icon: Icons.assignment_outlined,
+      activeIcon: Icons.assignment,
+      label: 'Assignments',
+    ),
+    _NavItem(
+      icon: Icons.people_outline,
+      activeIcon: Icons.people,
+      label: 'Staff',
+    ),
+    _NavItem(
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings,
+      label: 'Settings',
+    ),
   ];
 
   @override
@@ -41,6 +53,10 @@ class _AppNavBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -52,7 +68,7 @@ class _AppNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: 80,
           child: Row(
             children: List.generate(_items.length, (i) {
               final item = _items[i];
@@ -92,7 +108,7 @@ class _NavBarItem extends StatelessWidget {
         Text(
           item.label,
           style: GoogleFonts.poppins(
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             color: selected ? AppColors.primary : AppColors.textSecondary,
           ),

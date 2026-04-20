@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
+import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/family_share_token.dart';
@@ -23,6 +24,7 @@ class AssignmentDetailScreen extends StatefulWidget {
 }
 
 class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
+  late final AssignmentsCubit _assignmentsCubit;
   late final TextEditingController _decedentName;
   late final TextEditingController _pickupAddress;
   late final TextEditingController _contactName;
@@ -30,6 +32,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   late final TextEditingController _notes;
 
   var _saving = false;
+  var _didUpdate = false;
   String _status = '';
 
   String? _shareToken;
@@ -39,6 +42,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _assignmentsCubit = AssignmentsCubit(
+      assignmentsServices: context.read<AppRepositories>().assignments,
+    );
     _decedentName = TextEditingController(
       text: widget.initial['decedent_name']?.toString() ?? '',
     );
@@ -67,6 +73,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
 
   @override
   void dispose() {
+    _assignmentsCubit.close();
     _decedentName.dispose();
     _pickupAddress.dispose();
     _contactName.dispose();
@@ -85,22 +92,20 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     if (token == null) return;
     setState(() => _saving = true);
     try {
-      final body = await context
-          .read<AppRepositories>()
-          .assignments
-          .updateAssignment(
-            assignmentId: widget.assignmentId,
-            bearerToken: token,
-            payload: {
-              'decedent_name': _decedentName.text.trim(),
-              'pickup_address': _pickupAddress.text.trim(),
-              'contact_name': _contactName.text.trim(),
-              'contact_phone': _contactPhone.text.trim(),
-              'notes': _notes.text.trim(),
-            },
-          );
+      final body = await _assignmentsCubit.updateAssignment(
+        assignmentId: widget.assignmentId,
+        bearerToken: token,
+        payload: {
+          'decedent_name': _decedentName.text.trim(),
+          'pickup_address': _pickupAddress.text.trim(),
+          'contact_name': _contactName.text.trim(),
+          'contact_phone': _contactPhone.text.trim(),
+          'notes': _notes.text.trim(),
+        },
+      );
       if (!mounted) return;
       _applyAssignmentResponse(body);
+      _didUpdate = true;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Assignment saved')));
@@ -127,16 +132,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       _status = next;
     });
     try {
-      final body = await context
-          .read<AppRepositories>()
-          .assignments
-          .updateAssignment(
-            assignmentId: widget.assignmentId,
-            bearerToken: token,
-            payload: {'status': next},
-          );
+      final body = await _assignmentsCubit.updateAssignment(
+        assignmentId: widget.assignmentId,
+        bearerToken: token,
+        payload: {'status': next},
+      );
       if (!mounted) return;
       _applyAssignmentResponse(body);
+      _didUpdate = true;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Assignment status updated to $next')),
       );
@@ -173,16 +176,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     final newToken = generateFamilyShareToken();
     setState(() => _saving = true);
     try {
-      final body = await context
-          .read<AppRepositories>()
-          .assignments
-          .updateAssignment(
-            assignmentId: widget.assignmentId,
-            bearerToken: token,
-            payload: {'share_token': newToken},
-          );
+      final body = await _assignmentsCubit.updateAssignment(
+        assignmentId: widget.assignmentId,
+        bearerToken: token,
+        payload: {'share_token': newToken},
+      );
       if (!mounted) return;
       _applyAssignmentResponse(body);
+      _didUpdate = true;
       await Clipboard.setData(
         ClipboardData(text: AppEnv.familyShareUrlForToken(newToken)),
       );
@@ -210,16 +211,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     if (token == null) return;
     setState(() => _saving = true);
     try {
-      final body = await context
-          .read<AppRepositories>()
-          .assignments
-          .updateAssignment(
-            assignmentId: widget.assignmentId,
-            bearerToken: token,
-            payload: {'share_token': null},
-          );
+      final body = await _assignmentsCubit.updateAssignment(
+        assignmentId: widget.assignmentId,
+        bearerToken: token,
+        payload: {'share_token': null},
+      );
       if (!mounted) return;
       _applyAssignmentResponse(body);
+      _didUpdate = true;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Family link revoked')));
@@ -291,165 +290,176 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         ? AppEnv.familyShareUrlForToken(_shareToken!)
         : null;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Assignment'),
-        actions: [
-          TextButton(
-            onPressed: token == null || _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
-          ),
-        ],
-      ),
-      body: token == null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Please sign in to view and edit assignment details.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
+    return PopScope<bool>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.of(context).pop(_didUpdate);
+      },
+      child: BlocProvider.value(
+        value: _assignmentsCubit,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Assignment'),
+            actions: [
+              TextButton(
+                onPressed: token == null || _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save'),
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Row(
+            ],
+          ),
+          body: token == null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Please sign in to view and edit assignment details.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(16),
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Status',
-                        style: Theme.of(context).textTheme.titleMedium,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Status',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        DropdownButton<String>(
+                          value: _status,
+                          onChanged: _saving
+                              ? null
+                              : (v) => v == null ? null : _setStatus(v),
+                          items: AssignmentsServices.statuses
+                              .map(
+                                (s) => DropdownMenuItem<String>(
+                                  value: s,
+                                  child: Text(s),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _decedentName,
+                      decoration: const InputDecoration(
+                        labelText: 'Decedent name',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    DropdownButton<String>(
-                      value: _status,
-                      onChanged: _saving
-                          ? null
-                          : (v) => v == null ? null : _setStatus(v),
-                      items: AssignmentsServices.statuses
-                          .map(
-                            (s) => DropdownMenuItem<String>(
-                              value: s,
-                              child: Text(s),
-                            ),
-                          )
-                          .toList(),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _pickupAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Pickup address',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _decedentName,
-                  decoration: const InputDecoration(
-                    labelText: 'Decedent name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _pickupAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Pickup address',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _contactName,
-                  decoration: const InputDecoration(
-                    labelText: 'Contact name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _contactPhone,
-                  decoration: const InputDecoration(
-                    labelText: 'Contact phone',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _notes,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Family status link',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Share a link so families can see assignment status without signing in. '
-                  'Only send links through your usual secure channels.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 12),
-                if (shareUrl != null) ...[
-                  SelectableText(
-                    shareUrl,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  if (_shareExpiresIso != null && _shareExpiresIso!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Expires: $_shareExpiresIso',
-                        style: Theme.of(context).textTheme.bodySmall,
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _contactName,
+                      decoration: const InputDecoration(
+                        labelText: 'Contact name',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                  if (_shareOneTime)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'One-time: the first successful open consumes this link.',
-                        style: Theme.of(context).textTheme.bodySmall,
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _contactPhone,
+                      decoration: const InputDecoration(
+                        labelText: 'Contact phone',
+                        border: OutlineInputBorder(),
                       ),
+                      keyboardType: TextInputType.phone,
                     ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _saving ? null : _copyFamilyLink,
-                        icon: const Icon(Icons.copy, size: 18),
-                        label: const Text('Copy link'),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _notes,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes',
+                        border: OutlineInputBorder(),
                       ),
-                      OutlinedButton(
-                        onPressed: _saving ? null : _confirmRegenerate,
-                        child: const Text('Regenerate'),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Family status link',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Share a link so families can see assignment status without signing in. '
+                      'Only send links through your usual secure channels.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    if (shareUrl != null) ...[
+                      SelectableText(
+                        shareUrl,
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
-                      OutlinedButton(
-                        onPressed: _saving ? null : _confirmRevoke,
-                        child: const Text('Revoke'),
+                      if (_shareExpiresIso != null &&
+                          _shareExpiresIso!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Expires: $_shareExpiresIso',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      if (_shareOneTime)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'One-time: the first successful open consumes this link.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _saving ? null : _copyFamilyLink,
+                            icon: const Icon(Icons.copy, size: 18),
+                            label: const Text('Copy link'),
+                          ),
+                          OutlinedButton(
+                            onPressed: _saving ? null : _confirmRegenerate,
+                            child: const Text('Regenerate'),
+                          ),
+                          OutlinedButton(
+                            onPressed: _saving ? null : _confirmRevoke,
+                            child: const Text('Revoke'),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      FilledButton.icon(
+                        onPressed: _saving ? null : _issueShareTokenAndCopy,
+                        icon: const Icon(Icons.link),
+                        label: const Text('Create & copy link'),
                       ),
                     ],
-                  ),
-                ] else ...[
-                  FilledButton.icon(
-                    onPressed: _saving ? null : _issueShareTokenAndCopy,
-                    icon: const Icon(Icons.link),
-                    label: const Text('Create & copy link'),
-                  ),
-                ],
-              ],
-            ),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 }
