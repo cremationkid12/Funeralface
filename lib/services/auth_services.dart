@@ -48,12 +48,13 @@ class AuthServices {
   }
 
   Future<AuthResult> register({
+    required String name,
     required String email,
     required String password,
   }) async {
     final data = await _apiClient.postJson(
       '/v1/auth/register',
-      body: {'email': email.trim(), 'password': password},
+      body: {'name': name.trim(), 'email': email.trim(), 'password': password},
     );
     return _persistAndMap(data);
   }

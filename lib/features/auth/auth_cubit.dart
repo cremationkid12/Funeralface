@@ -40,6 +40,7 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   Future<void> register({
+    required String name,
     required String email,
     required String password,
     required ApiClient apiClient,
@@ -47,6 +48,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthState(busy: true));
     try {
       final result = await _authServices.register(
+        name: name,
         email: email,
         password: password,
       );
