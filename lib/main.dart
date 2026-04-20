@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await loadAppDotenv();
   if (AppEnv.hasSupabaseAuthConfig) {
     await Supabase.initialize(
       url: AppEnv.supabaseUrl,
