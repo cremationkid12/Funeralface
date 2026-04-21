@@ -64,7 +64,7 @@ class StaffServices {
     );
   }
 
-  /// Requires admin JWT; backend sends Supabase invite email.
+  /// Requires admin JWT; backend sends invite email via SendGrid.
   Future<Map<String, dynamic>> inviteByEmail({
     required String email,
     String? bearerToken,
