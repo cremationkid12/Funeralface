@@ -3,11 +3,18 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  ApiClient({required this.baseUrl, http.Client? httpClient})
-    : _httpClient = httpClient ?? http.Client();
+  ApiClient({
+    required this.baseUrl,
+    http.Client? httpClient,
+    this.onSessionUnauthorized,
+  }) : _httpClient = httpClient ?? http.Client();
 
   final String baseUrl;
   final http.Client _httpClient;
+
+  /// Called when an authenticated request returns 401 (e.g. expired JWT).
+  /// Typically clears secure storage and in-memory session; must not throw.
+  final Future<void> Function()? onSessionUnauthorized;
 
   Uri _uri(String path) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
@@ -28,7 +35,32 @@ class ApiClient {
     return jsonDecode(body) as Map<String, dynamic>;
   }
 
-  void _throwOnError(http.Response response, Map<String, dynamic> decoded) {
+  bool _sentBearer(String? bearerToken) =>
+      bearerToken != null && bearerToken.trim().isNotEmpty;
+
+  Future<void> _invalidateSessionIfUnauthorized({
+    required http.Response response,
+    required String? bearerToken,
+  }) async {
+    if (response.statusCode != 401 || !_sentBearer(bearerToken)) return;
+    final handler = onSessionUnauthorized;
+    if (handler == null) return;
+    try {
+      await handler();
+    } catch (_) {
+      // Session clear must not mask the original 401.
+    }
+  }
+
+  Future<void> _throwOnError(
+    http.Response response,
+    Map<String, dynamic> decoded, {
+    String? bearerToken,
+  }) async {
+    await _invalidateSessionIfUnauthorized(
+      response: response,
+      bearerToken: bearerToken,
+    );
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
         statusCode: response.statusCode,
@@ -47,7 +79,7 @@ class ApiClient {
       headers: _headers(bearerToken: bearerToken),
     );
     final decoded = _decode(response);
-    _throwOnError(response, decoded);
+    await _throwOnError(response, decoded, bearerToken: bearerToken);
     return decoded;
   }
 
@@ -62,7 +94,7 @@ class ApiClient {
       body: jsonEncode(body),
     );
     final decoded = _decode(response);
-    _throwOnError(response, decoded);
+    await _throwOnError(response, decoded, bearerToken: bearerToken);
     return decoded;
   }
 
@@ -77,7 +109,7 @@ class ApiClient {
       body: jsonEncode(body),
     );
     final decoded = _decode(response);
-    _throwOnError(response, decoded);
+    await _throwOnError(response, decoded, bearerToken: bearerToken);
     return decoded;
   }
 
@@ -87,7 +119,7 @@ class ApiClient {
       headers: _headers(bearerToken: bearerToken),
     );
     final decoded = _decode(response);
-    _throwOnError(response, decoded);
+    await _throwOnError(response, decoded, bearerToken: bearerToken);
   }
 }
 

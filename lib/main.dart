@@ -11,8 +11,13 @@ import 'package:funeralface_mobile/services/auth_services.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await loadAppDotenv();
-  final apiClient = ApiClient(baseUrl: AppEnv.apiBaseUrl);
-  await AuthServices(apiClient: apiClient).restoreSession();
+  late final AuthServices authServices;
+  final apiClient = ApiClient(
+    baseUrl: AppEnv.apiBaseUrl,
+    onSessionUnauthorized: () => authServices.clearSession(),
+  );
+  authServices = AuthServices(apiClient: apiClient);
+  await authServices.restoreSession();
   final router = createAppRouter();
   final deeplinkCoordinator = DeeplinkCoordinator(
     router: router,
