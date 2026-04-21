@@ -8,6 +8,7 @@ import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
 import 'package:funeralface_mobile/ui/widgets/app_status_chip.dart';
 import 'package:funeralface_mobile/ui/screens/dashboard/widgets/stat_card.dart';
+import 'package:funeralface_mobile/features/dashboard/dashboard_overview_invalidation.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_usecase.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -34,21 +35,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     AuthSession.instance.addListener(_onAuthSessionChanged);
+    DashboardOverviewInvalidation.instance.addListener(
+      _onDashboardOverviewInvalidated,
+    );
   }
 
   @override
   void dispose() {
     AuthSession.instance.removeListener(_onAuthSessionChanged);
+    DashboardOverviewInvalidation.instance.removeListener(
+      _onDashboardOverviewInvalidated,
+    );
     super.dispose();
+  }
+
+  void _onDashboardOverviewInvalidated() {
+    if (!mounted) return;
+    final token = staffBearerToken();
+    if (token == null) return;
+    setState(() {
+      _overviewFuture = _load();
+    });
   }
 
   void _onAuthSessionChanged() {
     if (!mounted) return;
     final token = staffBearerToken();
     if (token != null) {
-      setState(() => _overviewFuture = _load());
+      setState(() {
+        _overviewFuture = _load();
+      });
     } else {
-      setState(() => _overviewFuture = null);
+      setState(() {
+        _overviewFuture = null;
+      });
     }
   }
 
@@ -76,7 +96,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _overviewFuture = _load());
+    setState(() {
+      _overviewFuture = _load();
+    });
     await _overviewFuture;
   }
 
@@ -419,42 +441,74 @@ class _DashboardBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (overview.recentAssignments.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Recent Assignments',
-                style: Theme.of(context).textTheme.titleMedium,
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Assignments',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            TextButton(
+              onPressed: onSeeAll,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: AppColors.accent,
               ),
-              TextButton(
-                onPressed: onSeeAll,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  foregroundColor: AppColors.accent,
-                ),
-                child: Text(
-                  'See All',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+              child: Text(
+                'See All',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (overview.recentAssignments.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: _RecentAssignmentsEmpty(),
+          )
+        else
           ...overview.recentAssignments.map(
             (m) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: _AssignmentRow(data: m, onTap: () => onAssignmentTap(m)),
             ),
           ),
-        ],
       ],
+    );
+  }
+}
+
+/// Matches [assignments_screen.dart] `_EmptyBody` when `hasSearch` is false.
+class _RecentAssignmentsEmpty extends StatelessWidget {
+  const _RecentAssignmentsEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.assignment_outlined,
+            size: 56,
+            color: AppColors.border,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No assignments yet',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }
