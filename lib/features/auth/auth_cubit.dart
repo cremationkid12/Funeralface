@@ -1,18 +1,19 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/features/auth/auth_state.dart';
-import 'package:funeralface_mobile/services/auth_services.dart';
+import 'package:funeralface_mobile/services/auth_services.dart'
+    as auth_services;
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   AuthCubit({
-    required AuthServices authServices,
+    required auth_services.AuthServices authServices,
     required GoogleSignIn googleSignIn,
   }) : _authServices = authServices,
        _googleSignIn = googleSignIn,
        super(const AuthState());
 
-  final AuthServices _authServices;
+  final auth_services.AuthServices _authServices;
   final GoogleSignIn _googleSignIn;
 
   void clearMessages() =>
@@ -25,14 +26,26 @@ class AuthCubit extends Cubit<AuthState> {
     required String email,
     required String password,
     required ApiClient apiClient,
+    String? inviteToken,
   }) async {
     emit(const AuthState(busy: true));
     try {
       final result = await _authServices.login(
         email: email,
         password: password,
+        inviteToken: inviteToken,
       );
-      await ensureBackendProvisioned(apiClient, result.accessToken);
+      if ((inviteToken ?? '').trim().isNotEmpty) {
+        await auth_services.acceptInvite(
+          apiClient,
+          result.accessToken,
+          inviteToken!.trim(),
+        );
+      }
+      await auth_services.ensureBackendProvisioned(
+        apiClient,
+        result.accessToken,
+      );
       emit(const AuthState(success: true));
     } catch (e) {
       emit(AuthState(error: e.toString()));
@@ -44,6 +57,7 @@ class AuthCubit extends Cubit<AuthState> {
     required String email,
     required String password,
     required ApiClient apiClient,
+    String? inviteToken,
   }) async {
     emit(const AuthState(busy: true));
     try {
@@ -51,8 +65,19 @@ class AuthCubit extends Cubit<AuthState> {
         name: name,
         email: email,
         password: password,
+        inviteToken: inviteToken,
       );
-      await ensureBackendProvisioned(apiClient, result.accessToken);
+      if ((inviteToken ?? '').trim().isNotEmpty) {
+        await auth_services.acceptInvite(
+          apiClient,
+          result.accessToken,
+          inviteToken!.trim(),
+        );
+      }
+      await auth_services.ensureBackendProvisioned(
+        apiClient,
+        result.accessToken,
+      );
       emit(const AuthState(success: true));
     } on ApiException catch (e) {
       emit(AuthState(error: e.toString()));
@@ -91,7 +116,10 @@ class AuthCubit extends Cubit<AuthState> {
         return;
       }
       final result = await _authServices.loginWithGoogle(idToken: idToken);
-      await ensureBackendProvisioned(apiClient, result.accessToken);
+      await auth_services.ensureBackendProvisioned(
+        apiClient,
+        result.accessToken,
+      );
       emit(const AuthState(success: true));
     } catch (e) {
       emit(AuthState(error: e.toString()));

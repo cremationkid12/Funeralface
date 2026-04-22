@@ -10,6 +10,18 @@ Future<void> ensureBackendProvisioned(ApiClient api, String accessToken) async {
   );
 }
 
+Future<void> acceptInvite(
+  ApiClient api,
+  String accessToken,
+  String inviteToken,
+) async {
+  await api.postJson(
+    '/v1/auth/invites/accept',
+    body: <String, dynamic>{'invite_token': inviteToken},
+    bearerToken: accessToken,
+  );
+}
+
 class AuthResult {
   AuthResult({
     required this.userId,
@@ -39,11 +51,13 @@ class AuthServices {
   Future<AuthResult> login({
     required String email,
     required String password,
+    String? inviteToken,
   }) async {
-    final data = await _apiClient.postJson(
-      '/v1/auth/login',
-      body: {'email': email.trim(), 'password': password},
-    );
+    final body = <String, dynamic>{'email': email.trim(), 'password': password};
+    if ((inviteToken ?? '').trim().isNotEmpty) {
+      body['invite_token'] = inviteToken!.trim();
+    }
+    final data = await _apiClient.postJson('/v1/auth/login', body: body);
     return _persistAndMap(data);
   }
 
@@ -51,11 +65,17 @@ class AuthServices {
     required String name,
     required String email,
     required String password,
+    String? inviteToken,
   }) async {
-    final data = await _apiClient.postJson(
-      '/v1/auth/register',
-      body: {'name': name.trim(), 'email': email.trim(), 'password': password},
-    );
+    final body = <String, dynamic>{
+      'name': name.trim(),
+      'email': email.trim(),
+      'password': password,
+    };
+    if ((inviteToken ?? '').trim().isNotEmpty) {
+      body['invite_token'] = inviteToken!.trim();
+    }
+    final data = await _apiClient.postJson('/v1/auth/register', body: body);
     return _persistAndMap(data);
   }
 

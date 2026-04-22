@@ -57,9 +57,8 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
               GoRoute(
                 path: '/dashboard',
                 name: 'dashboard',
-                pageBuilder: (context, state) => const NoTransitionPage<void>(
-                  child: DashboardScreen(),
-                ),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: DashboardScreen()),
               ),
             ],
           ),
@@ -68,18 +67,22 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
               GoRoute(
                 path: '/assignments',
                 name: 'assignments',
-                pageBuilder: (context, state) => const NoTransitionPage<void>(
-                  child: AssignmentsScreen(),
-                ),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: AssignmentsScreen()),
                 routes: [
                   GoRoute(
                     path: ':id',
                     name: 'assignment_detail',
                     builder: (context, state) {
                       final extra = state.extra;
-                      final map = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
+                      final map = extra is Map<String, dynamic>
+                          ? extra
+                          : const <String, dynamic>{};
                       final id = state.pathParameters['id'] ?? '';
-                      return AssignmentDetailScreen(assignmentId: id, initial: map);
+                      return AssignmentDetailScreen(
+                        assignmentId: id,
+                        initial: map,
+                      );
                     },
                   ),
                 ],
@@ -91,16 +94,17 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
               GoRoute(
                 path: '/staff',
                 name: 'staff',
-                pageBuilder: (context, state) => const NoTransitionPage<void>(
-                  child: StaffScreen(),
-                ),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: StaffScreen()),
                 routes: [
                   GoRoute(
                     path: ':id',
                     name: 'staff_detail',
                     builder: (context, state) {
                       final extra = state.extra;
-                      final map = extra is Map<String, dynamic> ? extra : const <String, dynamic>{};
+                      final map = extra is Map<String, dynamic>
+                          ? extra
+                          : const <String, dynamic>{};
                       final id = state.pathParameters['id'] ?? '';
                       return StaffDetailScreen(staffId: id, initial: map);
                     },
@@ -114,9 +118,8 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
               GoRoute(
                 path: '/settings',
                 name: 'settings',
-                pageBuilder: (context, state) => const NoTransitionPage<void>(
-                  child: SettingsScreen(),
-                ),
+                pageBuilder: (context, state) =>
+                    const NoTransitionPage<void>(child: SettingsScreen()),
               ),
             ],
           ),
