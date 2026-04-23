@@ -7,10 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 Future<void> loadAppDotenv() async {
   final parts = <String>[];
   try {
-    parts.add(await rootBundle.loadString('.env'));
-  } catch (_) {}
-  try {
-    parts.add(await rootBundle.loadString('assets/env.default'));
+    parts.add(await rootBundle.loadString('assets/.env'));
   } catch (_) {}
   dotenv.loadFromString(envString: parts.join('\n'), isOptional: true);
 }
