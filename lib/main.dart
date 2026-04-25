@@ -7,7 +7,6 @@ import 'package:funeralface_mobile/core/deeplink/deeplink_coordinator.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/services/auth_services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
