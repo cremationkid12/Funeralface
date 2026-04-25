@@ -8,6 +8,7 @@ import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/family_share_token.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/services/assignments_services.dart';
+import 'package:funeralface_mobile/ui/widgets/app_status_chip.dart';
 
 class AssignmentDetailScreen extends StatefulWidget {
   const AssignmentDetailScreen({
@@ -141,7 +142,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       _applyAssignmentResponse(body);
       _didUpdate = true;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Assignment status updated to $next')),
+        SnackBar(
+          content: Text('Assignment status updated to ${statusLabel(next)}'),
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -345,7 +348,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                               .map(
                                 (s) => DropdownMenuItem<String>(
                                   value: s,
-                                  child: Text(s),
+                                  child: Text(statusLabel(s)),
                                 ),
                               )
                               .toList(),
