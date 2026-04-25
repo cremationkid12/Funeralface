@@ -85,7 +85,13 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
 
   void _applyAssignmentResponse(Map<String, dynamic> body) {
     if (!mounted) return;
-    setState(() => _readShareFromMap(body));
+    setState(() {
+      _readShareFromMap(body);
+      final status = body['status']?.toString().trim();
+      if (status != null && status.isNotEmpty) {
+        _status = status;
+      }
+    });
   }
 
   Future<void> _save() async {
@@ -102,6 +108,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           'contact_name': _contactName.text.trim(),
           'contact_phone': _contactPhone.text.trim(),
           'notes': _notes.text.trim(),
+          'status': _status,
         },
       );
       if (!mounted) return;
@@ -125,40 +132,8 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     }
   }
 
-  Future<void> _setStatus(String next) async {
-    final token = staffBearerToken();
-    if (token == null) return;
-    setState(() {
-      _saving = true;
-      _status = next;
-    });
-    try {
-      final body = await _assignmentsCubit.updateAssignment(
-        assignmentId: widget.assignmentId,
-        bearerToken: token,
-        payload: {'status': next},
-      );
-      if (!mounted) return;
-      _applyAssignmentResponse(body);
-      _didUpdate = true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Assignment status updated to ${statusLabel(next)}'),
-        ),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+  void _setStatus(String next) {
+    setState(() => _status = next);
   }
 
   Future<void> _copyFamilyLink() async {
