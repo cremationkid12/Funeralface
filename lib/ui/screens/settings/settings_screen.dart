@@ -4,12 +4,16 @@ import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/features/settings/settings_cubit.dart';
 import 'package:funeralface_mobile/features/settings/settings_state.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
+import 'package:funeralface_mobile/features/session/auth_session.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
 import 'package:funeralface_mobile/services/auth_services.dart';
+import 'package:funeralface_mobile/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:funeralface_mobile/ui/screens/settings/widgets/funeral_home_tab.dart';
+import 'package:funeralface_mobile/ui/screens/settings/widgets/my_profile_tab.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,21 +23,34 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final _homeFormKey = GlobalKey<FormState>();
+  final _profileFormKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _address = TextEditingController();
   final _logoUrl = TextEditingController();
   final _defaultMessage = TextEditingController();
+  final _myProfileImageUrl = TextEditingController();
+  final _myName = TextEditingController();
+  final _myPhone = TextEditingController();
+  final _myEmail = TextEditingController();
 
   late final SettingsCubit _settingsCubit;
+  late final StaffServices _staffServices;
   final ImagePicker _imagePicker = ImagePicker();
   bool _signOutBusy = false;
   bool _scheduledLoad = false;
+  bool _profileBusy = false;
+  bool _profileSaving = false;
+  bool _profileImageUploading = false;
+  String? _profileError;
+  String _myRole = 'user';
+  String _myProvider = 'email';
 
   @override
   void initState() {
     super.initState();
+    _staffServices = context.read<AppRepositories>().staff;
     _settingsCubit = SettingsCubit(
       settingsServices: context.read<AppRepositories>().settings,
     );
@@ -47,6 +64,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _address.dispose();
     _logoUrl.dispose();
     _defaultMessage.dispose();
+    _myProfileImageUrl.dispose();
+    _myName.dispose();
+    _myPhone.dispose();
+    _myEmail.dispose();
     super.dispose();
   }
 
@@ -66,13 +87,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final token = staffBearerToken();
     if (token == null) {
       _settingsCubit.clear();
+      setState(() {
+        _profileBusy = false;
+        _profileError = null;
+      });
       return;
     }
-    await _settingsCubit.load(bearerToken: token);
+    await Future.wait([
+      _settingsCubit.load(bearerToken: token),
+      _loadMyProfile(bearerToken: token),
+    ]);
   }
 
-  Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+  Future<void> _loadMyProfile({required String bearerToken}) async {
+    if (!mounted) return;
+    setState(() {
+      _profileBusy = true;
+      _profileError = null;
+    });
+    try {
+      final profile = await _staffServices.getMyProfile(
+        bearerToken: bearerToken,
+      );
+      if (!mounted) return;
+      setState(() {
+        _profileBusy = false;
+        _profileError = null;
+      });
+      _applyProfile(profile);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _profileBusy = false;
+        _profileError = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _profileBusy = false;
+        _profileError = e.toString();
+      });
+    }
+  }
+
+  Future<void> _saveFuneralHome() async {
+    if (!_isAdmin) return;
+    if (!(_homeFormKey.currentState?.validate() ?? false)) return;
     final token = staffBearerToken();
     if (token == null) return;
     try {
@@ -104,6 +164,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _saveMyProfile() async {
+    if (!(_profileFormKey.currentState?.validate() ?? false)) return;
+    final token = staffBearerToken();
+    if (token == null) return;
+    setState(() => _profileSaving = true);
+    try {
+      await _staffServices.updateMyProfile(
+        bearerToken: token,
+        payload: {
+          'name': _myName.text.trim(),
+          'phone': _myPhone.text.trim(),
+          'email': _myEmail.text.trim().isEmpty ? null : _myEmail.text.trim(),
+          'profile_image_url': _myProfileImageUrl.text.trim().isEmpty
+              ? null
+              : _myProfileImageUrl.text.trim(),
+        },
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile saved')));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _profileSaving = false);
+    }
+  }
+
+  Future<void> _pickAndUploadProfileImage() async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    final userId = AuthSession.instance.userId?.trim();
+    if (userId == null || userId.isEmpty) return;
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+      if (!mounted) return;
+      setState(() => _profileImageUploading = true);
+      final bytes = await picked.readAsBytes();
+      final imageUrl = await _staffServices.uploadMyProfileImage(
+        bearerToken: token,
+        bytes: bytes,
+        fileName: picked.name,
+        staffId: userId,
+      );
+      await _staffServices.updateMyProfile(
+        bearerToken: token,
+        payload: <String, dynamic>{'profile_image_url': imageUrl},
+      );
+      _myProfileImageUrl.text = imageUrl;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile image uploaded and saved')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _profileImageUploading = false);
     }
   }
 
@@ -146,11 +286,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         fileName: picked.name,
       );
       _logoUrl.text = logoUrl;
+      await _settingsCubit.save(
+        bearerToken: token,
+        payload: <String, dynamic>{'logo_url': logoUrl},
+      );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logo uploaded successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Logo uploaded and saved')));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -171,6 +315,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _logoUrl.text = data['logo_url']?.toString() ?? '';
     _defaultMessage.text = data['default_message']?.toString() ?? '';
   }
+
+  void _applyProfile(Map<String, dynamic> data) {
+    _myProfileImageUrl.text = data['profile_image_url']?.toString() ?? '';
+    _myName.text = data['name']?.toString() ?? '';
+    _myPhone.text = data['phone']?.toString() ?? '';
+    _myEmail.text = data['email']?.toString() ?? '';
+    _myProvider = data['provider']?.toString().trim().toLowerCase() ?? 'email';
+    _myRole = data['role']?.toString().trim().toLowerCase() == 'admin'
+        ? 'admin'
+        : 'user';
+  }
+
+  bool get _isAdmin => _myRole == 'admin';
 
   @override
   Widget build(BuildContext context) {
@@ -207,30 +364,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             message:
                                 'Please sign in to load and edit settings.',
                           )
-                        : state.busy
+                        : (state.busy || _profileBusy)
                         ? const Center(
                             child: CircularProgressIndicator(
                               color: AppColors.primary,
                             ),
                           )
-                        : state.error != null
+                        : (state.error != null || _profileError != null)
                         ? _ErrorState(
-                            error: state.error!,
+                            error:
+                                state.error ??
+                                _profileError ??
+                                'Unable to load settings.',
                             onRetry: _load,
                             onSignOut: _signOut,
                             signOutBusy: _signOutBusy,
                           )
-                        : _FormBody(
-                            formKey: _formKey,
-                            nameController: _name,
-                            phoneController: _phone,
-                            addressController: _address,
-                            logoUrlController: _logoUrl,
-                            defaultMessageController: _defaultMessage,
-                            saving: state.saving,
-                            logoUploading: state.logoUploading,
-                            onSave: _save,
-                            onUploadLogo: _pickAndUploadLogo,
+                        : DefaultTabController(
+                            length: 2,
+                            child: Column(
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: TabBar(
+                                    dividerColor: Colors.transparent,
+                                    indicatorSize: TabBarIndicatorSize.tab,
+                                    labelColor: Colors.white,
+                                    unselectedLabelColor:
+                                        AppColors.textSecondary,
+                                    indicator: BoxDecoration(
+                                      color: AppColors.accent,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    tabs: const [
+                                      Tab(text: 'Funeral Home'),
+                                      Tab(text: 'My Profile'),
+                                    ],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: TabBarView(
+                                    children: [
+                                      FuneralHomeTab(
+                                        formKey: _homeFormKey,
+                                        nameController: _name,
+                                        phoneController: _phone,
+                                        addressController: _address,
+                                        logoUrlController: _logoUrl,
+                                        defaultMessageController:
+                                            _defaultMessage,
+                                        saving: state.saving,
+                                        logoUploading: state.logoUploading,
+                                        editable: _isAdmin,
+                                        onSave: _saveFuneralHome,
+                                        onUploadLogo: _pickAndUploadLogo,
+                                      ),
+                                      MyProfileTab(
+                                        formKey: _profileFormKey,
+                                        imageUrlController: _myProfileImageUrl,
+                                        nameController: _myName,
+                                        phoneController: _myPhone,
+                                        emailController: _myEmail,
+                                        role: _myRole,
+                                        provider: _myProvider,
+                                        saving: _profileSaving,
+                                        imageUploading: _profileImageUploading,
+                                        onUploadImage:
+                                            _pickAndUploadProfileImage,
+                                        onSave: _saveMyProfile,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                   ),
                 ],
@@ -303,7 +519,7 @@ class _HeaderCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.accent,
+                  color: AppColors.statusCancelledFg,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
@@ -328,314 +544,6 @@ class _HeaderCard extends StatelessWidget {
             const SizedBox(width: 40),
         ],
       ),
-    );
-  }
-}
-
-// ── Form body ─────────────────────────────────────────────────────────────────
-
-class _FormBody extends StatelessWidget {
-  const _FormBody({
-    required this.formKey,
-    required this.nameController,
-    required this.phoneController,
-    required this.addressController,
-    required this.logoUrlController,
-    required this.defaultMessageController,
-    required this.saving,
-    required this.logoUploading,
-    required this.onSave,
-    required this.onUploadLogo,
-  });
-
-  final GlobalKey<FormState> formKey;
-  final TextEditingController nameController;
-  final TextEditingController phoneController;
-  final TextEditingController addressController;
-  final TextEditingController logoUrlController;
-  final TextEditingController defaultMessageController;
-  final bool saving;
-  final bool logoUploading;
-  final VoidCallback onSave;
-  final VoidCallback onUploadLogo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: formKey,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        children: [
-          // ── Fields card ────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _LogoCirclePicker(
-                  logoUrlController: logoUrlController,
-                  uploading: logoUploading,
-                  disabled: saving || logoUploading,
-                  onUploadLogo: onUploadLogo,
-                ),
-                const SizedBox(height: 20),
-                _SettingsField(
-                  label: 'Funeral Family Home Name',
-                  controller: nameController,
-                  hint: "eg. Emma's House",
-                  icon: Icons.home_work_outlined,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                _SettingsField(
-                  label: 'Phone',
-                  controller: phoneController,
-                  hint: '555-1234',
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                _SettingsField(
-                  label: 'Address',
-                  controller: addressController,
-                  hint: 'eg. 123 Oak Street',
-                  icon: Icons.location_on_outlined,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                // Notes / family message textarea
-                _FieldLabel('Family Message (OPTIONAL)'),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: defaultMessageController,
-                  maxLines: 3,
-                  style: GoogleFonts.poppins(fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Write here ...',
-                    hintStyle: GoogleFonts.poppins(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                    ),
-                    contentPadding: const EdgeInsets.all(14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Save button ────────────────────────────────────────────────
-          SizedBox(
-            height: 52,
-            child: FilledButton(
-              onPressed: saving ? null : onSave,
-              child: saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Save'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Field widgets ──────────────────────────────────────────────────────────────
-
-class _SettingsField extends StatelessWidget {
-  const _SettingsField({
-    required this.label,
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    this.keyboardType,
-    this.validator,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final TextInputType? keyboardType;
-  final FormFieldValidator<String>? validator;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _FieldLabel(label),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: GoogleFonts.poppins(fontSize: 14),
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Padding(
-              padding: const EdgeInsets.only(left: 12, right: 8),
-              child: Icon(icon, color: AppColors.accent, size: 18),
-            ),
-            prefixIconConstraints: const BoxConstraints(
-              minWidth: 0,
-              minHeight: 0,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: GoogleFonts.poppins(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: AppColors.textSecondary,
-      ),
-    );
-  }
-}
-
-// ── Logo picker ────────────────────────────────────────────────────────────────
-
-class _LogoCirclePicker extends StatelessWidget {
-  const _LogoCirclePicker({
-    required this.logoUrlController,
-    required this.uploading,
-    required this.disabled,
-    required this.onUploadLogo,
-  });
-  final TextEditingController logoUrlController;
-  final bool uploading;
-  final bool disabled;
-  final VoidCallback onUploadLogo;
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: logoUrlController,
-      builder: (context, value, _) {
-        final url = value.text.trim();
-        final hasLogo = url.isNotEmpty;
-
-        return Center(
-          child: Column(
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  GestureDetector(
-                    onTap: disabled ? null : onUploadLogo,
-                    child: Container(
-                      width: 104,
-                      height: 104,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border),
-                        color: AppColors.background,
-                      ),
-                      child: ClipOval(
-                        child: hasLogo
-                            ? Image.network(
-                                url,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.broken_image_outlined,
-                                  size: 28,
-                                  color: AppColors.textSecondary,
-                                ),
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return const Center(
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.primary,
-                                    ),
-                                  );
-                                },
-                              )
-                            : const Icon(
-                                Icons.home_work_outlined,
-                                size: 32,
-                                color: AppColors.textSecondary,
-                              ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: disabled ? null : onUploadLogo,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Ink(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: uploading
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Icon(
-                                    hasLogo
-                                        ? Icons.edit_rounded
-                                        : Icons.upload_rounded,
-                                    size: 16,
-                                    color: Colors.white,
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
