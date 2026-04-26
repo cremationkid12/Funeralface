@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/features/auth/auth_cubit.dart';
+import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
 import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
 import 'package:funeralface_mobile/services/auth_services.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
@@ -27,6 +28,13 @@ class FuneralfaceApp extends StatelessWidget {
         BlocProvider<StaffCubit>(
           create: (context) =>
               StaffCubit(staffServices: context.read<AppRepositories>().staff),
+        ),
+        BlocProvider<DashboardCubit>(
+          create: (context) => DashboardCubit(
+            staffServices: context.read<AppRepositories>().staff,
+            assignmentsServices: context.read<AppRepositories>().assignments,
+            apiClient: context.read<ApiClient>(),
+          ),
         ),
       ],
       child: MaterialApp.router(

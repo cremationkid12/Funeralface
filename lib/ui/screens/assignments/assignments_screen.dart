@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_overview_invalidation.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_state.dart';
+import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
 import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
@@ -116,7 +116,10 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       ),
     );
     if (!mounted || created != true) return;
-    DashboardOverviewInvalidation.instance.invalidate();
+    final token = staffBearerToken();
+    if (token != null) {
+      await context.read<DashboardCubit>().refresh(bearerToken: token);
+    }
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Assignment created')));

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_overview_invalidation.dart';
+import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
 import 'package:funeralface_mobile/core/env.dart';
@@ -183,7 +183,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       if (!mounted) return null;
       _applyAssignmentResponse(body);
       _didUpdate = true;
-      DashboardOverviewInvalidation.instance.invalidate();
+      await context.read<DashboardCubit>().refresh(bearerToken: token);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Assignment saved')));

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/features/session/auth_session.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
 import 'package:funeralface_mobile/core/theme/app_theme.dart';
+import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
 import 'package:funeralface_mobile/ui/widgets/app_status_chip.dart';
 import 'package:funeralface_mobile/ui/screens/dashboard/widgets/stat_card.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_overview_invalidation.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_usecase.dart';
+import 'package:funeralface_mobile/features/dashboard/dashboard_state.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,47 +27,29 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Future<DashboardOverview>? _overviewFuture;
+  late final DashboardCubit _dashboardCubit;
   var _depsReady = false;
 
   @override
   void initState() {
     super.initState();
+    _dashboardCubit = context.read<DashboardCubit>();
     AuthSession.instance.addListener(_onAuthSessionChanged);
-    DashboardOverviewInvalidation.instance.addListener(
-      _onDashboardOverviewInvalidated,
-    );
   }
 
   @override
   void dispose() {
     AuthSession.instance.removeListener(_onAuthSessionChanged);
-    DashboardOverviewInvalidation.instance.removeListener(
-      _onDashboardOverviewInvalidated,
-    );
     super.dispose();
-  }
-
-  void _onDashboardOverviewInvalidated() {
-    if (!mounted) return;
-    final token = staffBearerToken();
-    if (token == null) return;
-    setState(() {
-      _overviewFuture = _load();
-    });
   }
 
   void _onAuthSessionChanged() {
     if (!mounted) return;
     final token = staffBearerToken();
     if (token != null) {
-      setState(() {
-        _overviewFuture = _load();
-      });
+      _dashboardCubit.load(bearerToken: token);
     } else {
-      setState(() {
-        _overviewFuture = null;
-      });
+      _dashboardCubit.clear();
     }
   }
 
@@ -78,28 +59,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!_depsReady) {
       _depsReady = true;
       final token = staffBearerToken();
-      if (token != null) _overviewFuture = _load();
+      if (token != null) {
+        _dashboardCubit.load(bearerToken: token);
+      }
     }
-  }
-
-  Future<DashboardOverview> _load() async {
-    final token = staffBearerToken();
-    if (token == null || token.isEmpty) throw StateError('Not signed in');
-    final api = context.read<ApiClient>();
-    final repos = context.read<AppRepositories>();
-    if (AppEnv.hasSupabaseAuthConfig) {
-      try {
-        await ensureBackendProvisioned(api, token);
-      } catch (_) {}
-    }
-    return repos.dashboard.loadOverview(bearerToken: token);
   }
 
   Future<void> _refresh() async {
-    setState(() {
-      _overviewFuture = _load();
-    });
-    await _overviewFuture;
+    final token = staffBearerToken();
+    if (token == null) return;
+    await _dashboardCubit.refresh(bearerToken: token);
   }
 
   Future<void> _linkAccountOnServer() async {
@@ -112,7 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account linked. Loading dashboard…')),
       );
-      await _refresh();
+      await _dashboardCubit.refresh(bearerToken: token);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -125,18 +94,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final token = staffBearerToken();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        color: AppColors.primary,
-        child: token == null
-            ? _guestScrollView()
-            : FutureBuilder<DashboardOverview>(
-                future: _overviewFuture,
-                builder: (context, snapshot) =>
-                    _signedInScrollView(context, snapshot),
-              ),
+    return BlocProvider.value(
+      value: _dashboardCubit,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: RefreshIndicator(
+          onRefresh: _refresh,
+          color: AppColors.primary,
+          child: token == null
+              ? _guestScrollView()
+              : BlocBuilder<DashboardCubit, DashboardState>(
+                  builder: (context, state) =>
+                      _signedInScrollView(context, state),
+                ),
+        ),
       ),
     );
   }
@@ -154,29 +125,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _signedInScrollView(
-    BuildContext context,
-    AsyncSnapshot<DashboardOverview> snapshot,
-  ) {
-    final overview = snapshot.hasData ? snapshot.data : null;
+  Widget _signedInScrollView(BuildContext context, DashboardState state) {
+    final overview = state.overview;
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(child: _DashboardHeader(overview: overview)),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          sliver: SliverToBoxAdapter(child: _overviewPanel(context, snapshot)),
+          sliver: SliverToBoxAdapter(child: _overviewPanel(context, state)),
         ),
       ],
     );
   }
 
-  Widget _overviewPanel(
-    BuildContext context,
-    AsyncSnapshot<DashboardOverview> snapshot,
-  ) {
-    if (_overviewFuture == null) return const SizedBox.shrink();
-    if (snapshot.connectionState == ConnectionState.waiting) {
+  Widget _overviewPanel(BuildContext context, DashboardState state) {
+    if (state.busy && state.overview == null) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 48),
         child: Center(
@@ -184,8 +148,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
     }
-    if (snapshot.hasError) {
-      final msg = snapshot.error.toString();
+    if (state.error != null && state.overview == null) {
+      final msg = state.error!;
       final notProvisioned =
           msg.contains('not provisioned') ||
           msg.contains('Account is not provisioned');
@@ -195,7 +159,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onLinkServer: notProvisioned ? _linkAccountOnServer : null,
       );
     }
-    final data = snapshot.data!;
+    final data = state.overview;
+    if (data == null) return const SizedBox.shrink();
     return _DashboardBody(
       overview: data,
       onSeeAll: () => context.go('/assignments'),
