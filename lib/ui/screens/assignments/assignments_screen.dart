@@ -375,9 +375,9 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
   final _pickupAddress = TextEditingController();
   final _contactName = TextEditingController();
   final _contactPhone = TextEditingController();
-  final _eta = TextEditingController();
   final _notes = TextEditingController();
   String? _assignedStaffId;
+  TimeOfDay? _etaTime;
   bool _submitting = false;
 
   @override
@@ -386,9 +386,18 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
     _pickupAddress.dispose();
     _contactName.dispose();
     _contactPhone.dispose();
-    _eta.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickEtaTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _etaTime ?? TimeOfDay.now(),
+      helpText: 'Select ETA to Arrival',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _etaTime = picked);
   }
 
   Future<void> _submit() async {
@@ -397,12 +406,17 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
     if (token == null) return;
     setState(() => _submitting = true);
     try {
-      final eta = _eta.text.trim();
       final notes = _notes.text.trim();
-      final combinedNotes = [
-        if (eta.isNotEmpty) 'ETA to removal: $eta',
-        if (notes.isNotEmpty) notes,
-      ].join('\n');
+      final now = DateTime.now();
+      final etaDateTime = _etaTime == null
+          ? null
+          : DateTime(
+              now.year,
+              now.month,
+              now.day,
+              _etaTime!.hour,
+              _etaTime!.minute,
+            );
       final payload = <String, dynamic>{
         'decedent_name': _decedentName.text.trim(),
         'pickup_address': _pickupAddress.text.trim(),
@@ -410,11 +424,14 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
         'contact_phone': _contactPhone.text.trim(),
         'status': _assignedStaffId == null ? 'pending' : 'assigned',
       };
+      if (etaDateTime != null) {
+        payload['eta_time'] = etaDateTime.toIso8601String();
+      }
       if (_assignedStaffId != null) {
         payload['assigned_staff_id'] = _assignedStaffId;
       }
-      if (combinedNotes.isNotEmpty) {
-        payload['notes'] = combinedNotes;
+      if (notes.isNotEmpty) {
+        payload['notes'] = notes;
       }
       await widget.onCreate({...payload});
       if (!mounted) return;
@@ -501,11 +518,59 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
                 onChanged: (value) => setState(() => _assignedStaffId = value),
               ),
               const SizedBox(height: 14),
-              _SheetField(
-                label: 'ETA to Removal',
-                controller: _eta,
-                hint: '10:30 PM',
-                icon: Icons.schedule_outlined,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ETA to Arrival',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: _submitting ? null : _pickEtaTime,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        hintText: 'Select time',
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.only(left: 12, right: 8),
+                          child: Icon(
+                            Icons.schedule_outlined,
+                            color: AppColors.accent,
+                            size: 18,
+                          ),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 0,
+                          minHeight: 0,
+                        ),
+                        suffixIcon: _etaTime == null
+                            ? null
+                            : IconButton(
+                                onPressed: _submitting
+                                    ? null
+                                    : () => setState(() => _etaTime = null),
+                                icon: const Icon(Icons.close_rounded, size: 18),
+                              ),
+                      ),
+                      child: Text(
+                        _etaTime == null
+                            ? 'Select time'
+                            : _etaTime!.format(context),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: _etaTime == null
+                              ? AppColors.textSecondary
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               // Notes textarea
