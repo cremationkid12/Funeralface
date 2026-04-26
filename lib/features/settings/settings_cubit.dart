@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:funeralface_mobile/features/settings/settings_state.dart';
 import 'package:funeralface_mobile/services/settings_services.dart';
 
@@ -42,6 +43,37 @@ class SettingsCubit extends Cubit<SettingsState> {
       return normalized;
     } catch (error) {
       emit(state.copyWith(saving: false, error: error.toString()));
+      rethrow;
+    }
+  }
+
+  Future<String> uploadLogo({
+    required String bearerToken,
+    required Uint8List fileBytes,
+    required String fileName,
+  }) async {
+    emit(state.copyWith(logoUploading: true, clearError: true));
+    try {
+      final logoUrl = await _settingsServices.uploadImageAsset(
+        bearerToken: bearerToken,
+        bytes: fileBytes,
+        fileName: fileName,
+        purpose: 'funeral_home_logo',
+      );
+      final nextSettings = Map<String, dynamic>.from(
+        state.settings ?? const {},
+      );
+      nextSettings['logo_url'] = logoUrl;
+      emit(
+        state.copyWith(
+          logoUploading: false,
+          error: null,
+          settings: nextSettings,
+        ),
+      );
+      return logoUrl;
+    } catch (error) {
+      emit(state.copyWith(logoUploading: false, error: error.toString()));
       rethrow;
     }
   }

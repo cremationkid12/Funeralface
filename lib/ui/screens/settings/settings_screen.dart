@@ -9,6 +9,7 @@ import 'package:funeralface_mobile/core/theme/app_theme.dart';
 import 'package:funeralface_mobile/services/auth_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -26,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _defaultMessage = TextEditingController();
 
   late final SettingsCubit _settingsCubit;
+  final ImagePicker _imagePicker = ImagePicker();
   bool _signOutBusy = false;
   bool _scheduledLoad = false;
 
@@ -46,18 +48,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _logoUrl.dispose();
     _defaultMessage.dispose();
     super.dispose();
-  }
-
-  String? _validateHttpUrl(String? v) {
-    final t = v?.trim() ?? '';
-    if (t.isEmpty) return null;
-    final u = Uri.tryParse(t);
-    if (u == null ||
-        !u.hasScheme ||
-        (u.scheme != 'https' && u.scheme != 'http')) {
-      return 'Enter a valid http(s) URL';
-    }
-    return null;
   }
 
   @override
@@ -139,6 +129,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _pickAndUploadLogo() async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final logoUrl = await _settingsCubit.uploadLogo(
+        bearerToken: token,
+        fileBytes: bytes,
+        fileName: picked.name,
+      );
+      _logoUrl.text = logoUrl;
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logo uploaded successfully')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   void _applySettings(Map<String, dynamic> data) {
     _name.text = data['funeral_home_name']?.toString() ?? '';
     _phone.text = data['funeral_home_phone']?.toString() ?? '';
@@ -199,10 +224,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             addressController: _address,
                             logoUrlController: _logoUrl,
                             defaultMessageController: _defaultMessage,
-                            validateUrl: _validateHttpUrl,
                             saving: state.saving,
+                            logoUploading: state.logoUploading,
                             signOutBusy: _signOutBusy,
                             onSave: _save,
+                            onUploadLogo: _pickAndUploadLogo,
                             onSignOut: _signOut,
                           ),
                   ),
@@ -281,10 +307,11 @@ class _FormBody extends StatelessWidget {
     required this.addressController,
     required this.logoUrlController,
     required this.defaultMessageController,
-    required this.validateUrl,
     required this.saving,
+    required this.logoUploading,
     required this.signOutBusy,
     required this.onSave,
+    required this.onUploadLogo,
     this.onSignOut,
   });
 
@@ -294,10 +321,11 @@ class _FormBody extends StatelessWidget {
   final TextEditingController addressController;
   final TextEditingController logoUrlController;
   final TextEditingController defaultMessageController;
-  final FormFieldValidator<String> validateUrl;
   final bool saving;
+  final bool logoUploading;
   final bool signOutBusy;
   final VoidCallback onSave;
+  final VoidCallback onUploadLogo;
   final VoidCallback? onSignOut;
 
   @override
@@ -352,13 +380,32 @@ class _FormBody extends StatelessWidget {
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 16),
-                _SettingsField(
-                  label: 'Logo URL',
-                  controller: logoUrlController,
-                  hint: 'eg. abc.com/logo',
-                  icon: Icons.link_rounded,
-                  keyboardType: TextInputType.url,
-                  validator: validateUrl,
+                _FieldLabel('Funeral Home Logo'),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: (saving || logoUploading) ? null : onUploadLogo,
+                    icon: logoUploading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            logoUrlController.text.trim().isEmpty
+                                ? Icons.upload_rounded
+                                : Icons.sync_rounded,
+                            size: 18,
+                          ),
+                    label: Text(
+                      logoUploading
+                          ? 'Uploading...'
+                          : (logoUrlController.text.trim().isEmpty
+                                ? 'Upload Logo'
+                                : 'Replace Logo'),
+                    ),
+                  ),
                 ),
                 // Logo preview
                 ValueListenableBuilder<TextEditingValue>(
