@@ -14,6 +14,7 @@ class StaffCard extends StatelessWidget {
     final name = data['name']?.toString() ?? '—';
     final phone = data['phone']?.toString() ?? '';
     final role = data['role']?.toString() ?? '';
+    final profileImageUrl = data['profile_image_url']?.toString().trim() ?? '';
     final active = () {
       final a = data['active'];
       if (a is bool) return a;
@@ -54,16 +55,18 @@ class StaffCard extends StatelessWidget {
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
-                    child: Text(
-                      initials.toUpperCase(),
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
+                  child: profileImageUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            profileImageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _InitialsAvatar(
+                              initials: initials.toUpperCase(),
+                            ),
+                          ),
+                        )
+                      : _InitialsAvatar(initials: initials.toUpperCase()),
                 ),
                 Positioned(
                   bottom: 0,
@@ -118,6 +121,26 @@ class StaffCard extends StatelessWidget {
             ),
             if (role.isNotEmpty) RoleChip(role: role),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        initials,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
         ),
       ),
     );

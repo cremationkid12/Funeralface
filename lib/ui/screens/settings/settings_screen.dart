@@ -34,6 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _myName = TextEditingController();
   final _myPhone = TextEditingController();
   final _myEmail = TextEditingController();
+  final _myBio = TextEditingController();
 
   late final SettingsCubit _settingsCubit;
   late final StaffServices _staffServices;
@@ -45,7 +46,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _profileImageUploading = false;
   String? _profileError;
   String _myRole = 'user';
-  String _myProvider = 'email';
 
   @override
   void initState() {
@@ -68,6 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _myName.dispose();
     _myPhone.dispose();
     _myEmail.dispose();
+    _myBio.dispose();
     super.dispose();
   }
 
@@ -151,9 +152,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Settings saved')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Funeral Home information saved')),
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -179,6 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'name': _myName.text.trim(),
           'phone': _myPhone.text.trim(),
           'email': _myEmail.text.trim().isEmpty ? null : _myEmail.text.trim(),
+          'bio': _myBio.text.trim().isEmpty ? null : _myBio.text.trim(),
           'profile_image_url': _myProfileImageUrl.text.trim().isEmpty
               ? null
               : _myProfileImageUrl.text.trim(),
@@ -321,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _myName.text = data['name']?.toString() ?? '';
     _myPhone.text = data['phone']?.toString() ?? '';
     _myEmail.text = data['email']?.toString() ?? '';
-    _myProvider = data['provider']?.toString().trim().toLowerCase() ?? 'email';
+    _myBio.text = data['bio']?.toString() ?? '';
     _myRole = data['role']?.toString().trim().toLowerCase() == 'admin'
         ? 'admin'
         : 'user';
@@ -434,8 +436,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         nameController: _myName,
                                         phoneController: _myPhone,
                                         emailController: _myEmail,
+                                        bioController: _myBio,
                                         role: _myRole,
-                                        provider: _myProvider,
                                         saving: _profileSaving,
                                         imageUploading: _profileImageUploading,
                                         onUploadImage:
