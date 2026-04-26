@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/features/dashboard/dashboard_overview_invalidation.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_state.dart';
+import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
@@ -83,11 +84,27 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<void> _openCreateSheet() async {
+    List<_AssignableStaffOption> staffOptions = const [];
+    try {
+      staffOptions = await _loadAssignableStaffOptions();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _CreateAssignmentSheet(
+        staffOptions: staffOptions,
         onCreate: (payload) async {
           final token = staffBearerToken();
           if (token == null) return;
@@ -103,6 +120,32 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Assignment created')));
+  }
+
+  Future<List<_AssignableStaffOption>> _loadAssignableStaffOptions() async {
+    final staffCubit = context.read<StaffCubit>();
+    var items = staffCubit.state.items;
+    if (items.isEmpty) {
+      final token = staffBearerToken();
+      if (token == null) return const [];
+      await staffCubit.load(bearerToken: token);
+      items = staffCubit.state.items;
+    }
+    return items
+        .whereType<Map<String, dynamic>>()
+        .where((item) => item['active'] != false)
+        .map((item) {
+          final id = item['id']?.toString().trim() ?? '';
+          if (id.isEmpty) return null;
+          final name = item['name']?.toString().trim() ?? '';
+          final email = item['email']?.toString().trim() ?? '';
+          final label = name.isNotEmpty
+              ? name
+              : (email.isNotEmpty ? email : 'Staff $id');
+          return _AssignableStaffOption(id: id, label: label);
+        })
+        .whereType<_AssignableStaffOption>()
+        .toList();
   }
 
   @override
@@ -581,9 +624,13 @@ class _AssignmentCard extends StatelessWidget {
 // ── Create assignment bottom sheet ─────────────────────────────────────────────
 
 class _CreateAssignmentSheet extends StatefulWidget {
-  const _CreateAssignmentSheet({required this.onCreate});
+  const _CreateAssignmentSheet({
+    required this.onCreate,
+    required this.staffOptions,
+  });
 
   final Future<void> Function(Map<String, dynamic> payload) onCreate;
+  final List<_AssignableStaffOption> staffOptions;
 
   @override
   State<_CreateAssignmentSheet> createState() => _CreateAssignmentSheetState();
@@ -597,6 +644,7 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
   final _contactPhone = TextEditingController();
   final _eta = TextEditingController();
   final _notes = TextEditingController();
+  String? _assignedStaffId;
   bool _submitting = false;
 
   @override
@@ -622,13 +670,20 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
         if (eta.isNotEmpty) 'ETA to removal: $eta',
         if (notes.isNotEmpty) notes,
       ].join('\n');
-      await widget.onCreate({
+      final payload = <String, dynamic>{
         'decedent_name': _decedentName.text.trim(),
         'pickup_address': _pickupAddress.text.trim(),
         'contact_name': _contactName.text.trim(),
         'contact_phone': _contactPhone.text.trim(),
-        if (combinedNotes.isNotEmpty) 'notes': combinedNotes,
-      });
+        'status': _assignedStaffId == null ? 'pending' : 'assigned',
+      };
+      if (_assignedStaffId != null) {
+        payload['assigned_staff_id'] = _assignedStaffId;
+      }
+      if (combinedNotes.isNotEmpty) {
+        payload['notes'] = combinedNotes;
+      }
+      await widget.onCreate({...payload});
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
@@ -704,6 +759,13 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
                 icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 required: true,
+              ),
+              const SizedBox(height: 14),
+              _StaffDropdown(
+                value: _assignedStaffId,
+                enabled: !_submitting,
+                staffOptions: widget.staffOptions,
+                onChanged: (value) => setState(() => _assignedStaffId = value),
               ),
               const SizedBox(height: 14),
               _SheetField(
@@ -830,6 +892,82 @@ class _SheetField extends StatelessWidget {
       ],
     );
   }
+}
+
+class _StaffDropdown extends StatelessWidget {
+  const _StaffDropdown({
+    required this.value,
+    required this.enabled,
+    required this.staffOptions,
+    required this.onChanged,
+  });
+
+  final String? value;
+  final bool enabled;
+  final List<_AssignableStaffOption> staffOptions;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedId = staffOptions.any((item) => item.id == value)
+        ? value
+        : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Assign Staff (Optional)',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String?>(
+          initialValue: selectedId,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: AppColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 12, right: 8),
+              child: const Icon(
+                Icons.person_pin_outlined,
+                color: AppColors.accent,
+                size: 18,
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 0,
+              minHeight: 0,
+            ),
+          ),
+          items: <DropdownMenuItem<String?>>[
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('Unassigned'),
+            ),
+            ...staffOptions.map(
+              (staff) => DropdownMenuItem<String?>(
+                value: staff.id,
+                child: Text(staff.label),
+              ),
+            ),
+          ],
+          onChanged: enabled ? onChanged : null,
+        ),
+      ],
+    );
+  }
+}
+
+class _AssignableStaffOption {
+  const _AssignableStaffOption({required this.id, required this.label});
+
+  final String id;
+  final String label;
 }
 
 // ── Empty / Error states ───────────────────────────────────────────────────────

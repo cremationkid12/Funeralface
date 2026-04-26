@@ -53,7 +53,7 @@ class AppEnv {
   static String get familyLinkBaseUrl => _afterDefine(
     'FAMILY_LINK_BASE',
     const String.fromEnvironment('FAMILY_LINK_BASE', defaultValue: ''),
-    'https://links.funeralface.app',
+    'http://localhost:5173',
   );
 
   static String familyShareUrlForToken(String token) {

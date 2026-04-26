@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funeralface_mobile/app/app_repositories.dart';
 import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
 import 'package:funeralface_mobile/features/session/staff_auth.dart';
+import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
 import 'package:funeralface_mobile/core/env.dart';
 import 'package:funeralface_mobile/core/family_share_token.dart';
 import 'package:funeralface_mobile/core/network/api_client.dart';
@@ -35,6 +36,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   var _saving = false;
   var _didUpdate = false;
   String _status = '';
+  String? _assignedStaffId;
+  List<_AssignableStaffOption> _staffOptions = const [];
+  var _loadingStaff = false;
 
   String? _shareToken;
   String? _shareExpiresIso;
@@ -62,7 +66,13 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       text: widget.initial['notes']?.toString() ?? '',
     );
     _status = widget.initial['status']?.toString() ?? 'pending';
+    final rawAssignedStaffId = widget.initial['assigned_staff_id']?.toString();
+    _assignedStaffId =
+        (rawAssignedStaffId != null && rawAssignedStaffId.isNotEmpty)
+        ? rawAssignedStaffId
+        : null;
     _readShareFromMap(widget.initial);
+    _loadAssignableStaff();
   }
 
   void _readShareFromMap(Map<String, dynamic> map) {
@@ -91,7 +101,59 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       if (status != null && status.isNotEmpty) {
         _status = status;
       }
+      final assignedStaffId = body['assigned_staff_id']?.toString().trim();
+      _assignedStaffId = (assignedStaffId != null && assignedStaffId.isNotEmpty)
+          ? assignedStaffId
+          : null;
     });
+  }
+
+  Future<void> _loadAssignableStaff() async {
+    final staffCubit = context.read<StaffCubit>();
+    var items = staffCubit.state.items;
+    final shouldLoad = items.isEmpty;
+
+    if (shouldLoad) {
+      final token = staffBearerToken();
+      if (token == null) return;
+      setState(() => _loadingStaff = true);
+      try {
+        await staffCubit.load(bearerToken: token);
+        items = staffCubit.state.items;
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to load staff list right now.')),
+        );
+      } finally {
+        if (mounted) setState(() => _loadingStaff = false);
+      }
+    }
+
+    try {
+      final options = items
+          .whereType<Map<String, dynamic>>()
+          .where((item) => item['active'] != false)
+          .map((item) {
+            final id = item['id']?.toString().trim() ?? '';
+            if (id.isEmpty) return null;
+            final name = item['name']?.toString().trim() ?? '';
+            final email = item['email']?.toString().trim() ?? '';
+            final label = name.isNotEmpty
+                ? name
+                : (email.isNotEmpty ? email : 'Staff $id');
+            return _AssignableStaffOption(id: id, label: label);
+          })
+          .whereType<_AssignableStaffOption>()
+          .toList();
+      if (!mounted) return null;
+      setState(() => _staffOptions = options);
+    } catch (_) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to load staff list right now.')),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -99,6 +161,11 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     if (token == null) return;
     setState(() => _saving = true);
     try {
+      final statusToSave = _assignedStaffId == null && _status == 'assigned'
+          ? 'pending'
+          : (_assignedStaffId != null && _status == 'pending'
+                ? 'assigned'
+                : _status);
       final body = await _assignmentsCubit.updateAssignment(
         assignmentId: widget.assignmentId,
         bearerToken: token,
@@ -108,22 +175,23 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           'contact_name': _contactName.text.trim(),
           'contact_phone': _contactPhone.text.trim(),
           'notes': _notes.text.trim(),
-          'status': _status,
+          'status': statusToSave,
+          'assigned_staff_id': _assignedStaffId,
         },
       );
-      if (!mounted) return;
+      if (!mounted) return null;
       _applyAssignmentResponse(body);
       _didUpdate = true;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Assignment saved')));
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted) return null;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return null;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
@@ -137,7 +205,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   }
 
   Future<void> _copyFamilyLink() async {
-    final t = _shareToken;
+    final t = _shareToken?.trim();
     if (t == null || t.isEmpty) return;
     await Clipboard.setData(
       ClipboardData(text: AppEnv.familyShareUrlForToken(t)),
@@ -148,9 +216,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     ).showSnackBar(const SnackBar(content: Text('Link copied')));
   }
 
-  Future<void> _issueShareTokenAndCopy() async {
+  Future<String?> _issueShareToken() async {
     final token = staffBearerToken();
-    if (token == null) return;
+    if (token == null) return null;
     final newToken = generateFamilyShareToken();
     setState(() => _saving = true);
     try {
@@ -159,106 +227,64 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         bearerToken: token,
         payload: {'share_token': newToken},
       );
-      if (!mounted) return;
+      if (!mounted) return null;
       _applyAssignmentResponse(body);
+      final resolvedToken =
+          _shareToken ?? body['share_token']?.toString().trim() ?? newToken;
+      if (_shareToken == null || _shareToken!.isEmpty) {
+        setState(() => _shareToken = resolvedToken);
+      }
       _didUpdate = true;
-      await Clipboard.setData(
-        ClipboardData(text: AppEnv.familyShareUrlForToken(newToken)),
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('New family link saved and copied')),
-      );
+      return resolvedToken;
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted) return null;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return null;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+    return null;
   }
 
-  Future<void> _revokeFamilyLink() async {
+  Future<void> _createAndShareFamilyLink() async {
+    final token = await _issueShareToken();
+    if (!mounted || token == null || token.isEmpty) return;
+    await _openShareFamilyLinkSheet();
+  }
+
+  Future<void> _openShareFamilyLinkSheet() async {
     final token = staffBearerToken();
-    if (token == null) return;
-    setState(() => _saving = true);
-    try {
-      final body = await _assignmentsCubit.updateAssignment(
-        assignmentId: widget.assignmentId,
-        bearerToken: token,
-        payload: {'share_token': null},
+    final shareToken = _shareToken?.trim();
+    if (token == null || shareToken == null || shareToken.isEmpty) return;
+    final sent = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ShareFamilyLinkSheet(
+        familyLink: AppEnv.familyShareUrlForToken(shareToken),
+        onShare: (email) async {
+          await context
+              .read<AppRepositories>()
+              .assignments
+              .shareFamilyLinkByEmail(
+                assignmentId: widget.assignmentId,
+                email: email,
+                bearerToken: token,
+              );
+        },
+      ),
+    );
+    if (sent == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Family link sent by email.')),
       );
-      if (!mounted) return;
-      _applyAssignmentResponse(body);
-      _didUpdate = true;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Family link revoked')));
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _saving = false);
     }
-  }
-
-  Future<void> _confirmRegenerate() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Regenerate family link?'),
-        content: const Text(
-          'Anyone with the old link will no longer see status. A new link will be created and copied.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Regenerate'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true && mounted) await _issueShareTokenAndCopy();
-  }
-
-  Future<void> _confirmRevoke() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Revoke family link?'),
-        content: const Text(
-          'Family members will not be able to open the status page with this link.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Revoke'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true && mounted) await _revokeFamilyLink();
   }
 
   @override
@@ -331,6 +357,56 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Assigned staff (optional)',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        if (_loadingStaff)
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Builder(
+                      builder: (_) {
+                        final selectedId =
+                            _staffOptions.any(
+                              (staff) => staff.id == _assignedStaffId,
+                            )
+                            ? _assignedStaffId
+                            : null;
+                        return DropdownButtonFormField<String?>(
+                          initialValue: selectedId,
+                          onChanged: _saving || _loadingStaff
+                              ? null
+                              : (value) =>
+                                    setState(() => _assignedStaffId = value),
+                          items: <DropdownMenuItem<String?>>[
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('Unassigned'),
+                            ),
+                            ..._staffOptions.map(
+                              (staff) => DropdownMenuItem<String?>(
+                                value: staff.id,
+                                child: Text(staff.label),
+                              ),
+                            ),
+                          ],
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: _decedentName,
                       decoration: const InputDecoration(
@@ -386,9 +462,27 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     if (shareUrl != null) ...[
-                      SelectableText(
-                        shareUrl,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: SelectableText(
+                              shareUrl,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Copy link',
+                            onPressed: _saving ? null : _copyFamilyLink,
+                            icon: const Icon(Icons.copy, size: 20),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: _saving ? null : _openShareFamilyLinkSheet,
+                        icon: const Icon(Icons.send),
+                        label: const Text('Share Link'),
                       ),
                       if (_shareExpiresIso != null &&
                           _shareExpiresIso!.isNotEmpty)
@@ -407,35 +501,148 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: _saving ? null : _copyFamilyLink,
-                            icon: const Icon(Icons.copy, size: 18),
-                            label: const Text('Copy link'),
-                          ),
-                          OutlinedButton(
-                            onPressed: _saving ? null : _confirmRegenerate,
-                            child: const Text('Regenerate'),
-                          ),
-                          OutlinedButton(
-                            onPressed: _saving ? null : _confirmRevoke,
-                            child: const Text('Revoke'),
-                          ),
-                        ],
-                      ),
                     ] else ...[
                       FilledButton.icon(
-                        onPressed: _saving ? null : _issueShareTokenAndCopy,
+                        onPressed: _saving ? null : _createAndShareFamilyLink,
                         icon: const Icon(Icons.link),
-                        label: const Text('Create & copy link'),
+                        label: const Text('Create & share link'),
                       ),
                     ],
                   ],
                 ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AssignableStaffOption {
+  const _AssignableStaffOption({required this.id, required this.label});
+
+  final String id;
+  final String label;
+}
+
+class _ShareFamilyLinkSheet extends StatefulWidget {
+  const _ShareFamilyLinkSheet({
+    required this.familyLink,
+    required this.onShare,
+  });
+
+  final String familyLink;
+  final Future<void> Function(String email) onShare;
+
+  @override
+  State<_ShareFamilyLinkSheet> createState() => _ShareFamilyLinkSheetState();
+}
+
+class _ShareFamilyLinkSheetState extends State<_ShareFamilyLinkSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _submitting = true);
+    try {
+      await widget.onShare(_email.text.trim());
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, 20 + bottom),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Share Family Link',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Send the family status page link by email.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              SelectableText(
+                widget.familyLink,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  final v = value?.trim() ?? "";
+                  if (v.isEmpty) return 'Required';
+                  if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v)) {
+                    return 'Enter a valid email';
+                  }
+                  return null;
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Family email',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Send Link'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: _submitting
+                    ? null
+                    : () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
         ),
       ),
     );

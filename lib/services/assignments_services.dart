@@ -44,4 +44,16 @@ class AssignmentsServices {
       bearerToken: bearerToken,
     );
   }
+
+  Future<Map<String, dynamic>> shareFamilyLinkByEmail({
+    required String assignmentId,
+    required String email,
+    String? bearerToken,
+  }) {
+    return _apiClient.postJson(
+      '/v1/assignments/$assignmentId/share/email',
+      body: {'email': email.trim()},
+      bearerToken: bearerToken,
+    );
+  }
 }
