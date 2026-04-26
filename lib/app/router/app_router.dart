@@ -3,7 +3,6 @@ import 'package:funeralface_mobile/ui/screens/assignments/assignment_detail_scre
 import 'package:funeralface_mobile/ui/screens/auth/auth_screen.dart';
 import 'package:funeralface_mobile/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:funeralface_mobile/features/session/auth_session.dart';
-import 'package:funeralface_mobile/ui/screens/assignments/family_assignment_screen.dart';
 import 'package:funeralface_mobile/ui/screens/settings/settings_screen.dart';
 import 'package:funeralface_mobile/ui/screens/splash/splash_screen.dart';
 import 'package:funeralface_mobile/ui/screens/staff/staff_detail_screen.dart';
@@ -37,15 +36,6 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
         path: '/auth',
         name: 'auth',
         builder: (context, state) => const AuthScreen(),
-      ),
-      GoRoute(
-        path: '/family/:token',
-        name: 'family_by_token',
-        builder: (context, state) {
-          final encoded = state.pathParameters['token'] ?? '';
-          final token = Uri.decodeComponent(encoded);
-          return FamilyAssignmentScreen(token: token);
-        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
