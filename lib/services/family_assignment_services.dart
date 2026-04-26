@@ -1,17 +1,17 @@
 import '../core/network/api_client.dart';
-import '../features/family/family_assignment_view.dart';
+import '../models/family_assignment_model.dart';
 
 enum FamilyAssignmentFailure { notFound, expired, rateLimited, unknown }
 
 class FamilyAssignmentResult {
-  const FamilyAssignmentResult._(this.view, this.failureCode, this.message);
+  const FamilyAssignmentResult._(this.model, this.failureCode, this.message);
 
-  final FamilyAssignmentView? view;
+  final FamilyAssignmentModel? model;
   final FamilyAssignmentFailure? failureCode;
   final String? message;
 
-  factory FamilyAssignmentResult.ok(FamilyAssignmentView view) {
-    return FamilyAssignmentResult._(view, null, null);
+  factory FamilyAssignmentResult.ok(FamilyAssignmentModel model) {
+    return FamilyAssignmentResult._(model, null, null);
   }
 
   factory FamilyAssignmentResult.failure(
@@ -21,7 +21,7 @@ class FamilyAssignmentResult {
     return FamilyAssignmentResult._(null, code, message);
   }
 
-  bool get isOk => view != null;
+  bool get isOk => model != null;
 }
 
 /// Reads family-assignment data via the public token endpoint (no auth).
@@ -42,7 +42,7 @@ class FamilyAssignmentServices {
 
     try {
       final json = await _apiClient.getJson(path);
-      return FamilyAssignmentResult.ok(FamilyAssignmentView.fromJson(json));
+      return FamilyAssignmentResult.ok(FamilyAssignmentModel.fromJson(json));
     } on ApiException catch (e) {
       switch (e.statusCode) {
         case 404:

@@ -524,9 +524,12 @@ class _AssignmentRow extends StatelessWidget {
     final name = data['decedent_name']?.toString() ?? '—';
     final address = data['pickup_address']?.toString() ?? '';
     final status = data['status']?.toString() ?? '';
-    final initials = name.trim().isNotEmpty
-        ? name
-              .trim()
+    final assignedStaffName =
+        data['assigned_staff_name']?.toString().trim() ?? '';
+    final assignedStaffProfileImageUrl =
+        data['assigned_staff_profile_image_url']?.toString().trim() ?? '';
+    final initials = assignedStaffName.isNotEmpty
+        ? assignedStaffName
               .split(' ')
               .map((w) => w.isNotEmpty ? w[0] : '')
               .take(2)
@@ -553,16 +556,17 @@ class _AssignmentRow extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Center(
-                  child: Text(
-                    initials.toUpperCase(),
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
+                child: assignedStaffProfileImageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          assignedStaffProfileImageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _AssignedStaffInitialsAvatar(initials: initials),
+                        ),
+                      )
+                    : _AssignedStaffInitialsAvatar(initials: initials),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -606,6 +610,26 @@ class _AssignmentRow extends StatelessWidget {
               AppStatusChip(status: status),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AssignedStaffInitialsAvatar extends StatelessWidget {
+  const _AssignedStaffInitialsAvatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        initials.toUpperCase(),
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
         ),
       ),
     );
