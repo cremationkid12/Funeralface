@@ -193,7 +193,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Header card ──────────────────────────────────────────────
-                  _HeaderCard(),
+                  _HeaderCard(
+                    onSignOut: token == null ? null : _signOut,
+                    signOutBusy: _signOutBusy,
+                  ),
 
                   const SizedBox(height: 10),
 
@@ -226,10 +229,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             defaultMessageController: _defaultMessage,
                             saving: state.saving,
                             logoUploading: state.logoUploading,
-                            signOutBusy: _signOutBusy,
                             onSave: _save,
                             onUploadLogo: _pickAndUploadLogo,
-                            onSignOut: _signOut,
                           ),
                   ),
                 ],
@@ -245,6 +246,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 // ── Header ─────────────────────────────────────────────────────────────────────
 
 class _HeaderCard extends StatelessWidget {
+  const _HeaderCard({this.onSignOut, this.signOutBusy = false});
+
+  final VoidCallback? onSignOut;
+  final bool signOutBusy;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -290,7 +296,36 @@ class _HeaderCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          const SizedBox(width: 40),
+          if (onSignOut != null)
+            GestureDetector(
+              onTap: signOutBusy ? null : onSignOut,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: signOutBusy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.logout_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: 40),
         ],
       ),
     );
@@ -309,10 +344,8 @@ class _FormBody extends StatelessWidget {
     required this.defaultMessageController,
     required this.saving,
     required this.logoUploading,
-    required this.signOutBusy,
     required this.onSave,
     required this.onUploadLogo,
-    this.onSignOut,
   });
 
   final GlobalKey<FormState> formKey;
@@ -323,10 +356,8 @@ class _FormBody extends StatelessWidget {
   final TextEditingController defaultMessageController;
   final bool saving;
   final bool logoUploading;
-  final bool signOutBusy;
   final VoidCallback onSave;
   final VoidCallback onUploadLogo;
-  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -352,6 +383,13 @@ class _FormBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _LogoCirclePicker(
+                  logoUrlController: logoUrlController,
+                  uploading: logoUploading,
+                  disabled: saving || logoUploading,
+                  onUploadLogo: onUploadLogo,
+                ),
+                const SizedBox(height: 20),
                 _SettingsField(
                   label: 'Funeral Family Home Name',
                   controller: nameController,
@@ -378,46 +416,6 @@ class _FormBody extends StatelessWidget {
                   icon: Icons.location_on_outlined,
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                _FieldLabel('Funeral Home Logo'),
-                const SizedBox(height: 6),
-                SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: (saving || logoUploading) ? null : onUploadLogo,
-                    icon: logoUploading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            logoUrlController.text.trim().isEmpty
-                                ? Icons.upload_rounded
-                                : Icons.sync_rounded,
-                            size: 18,
-                          ),
-                    label: Text(
-                      logoUploading
-                          ? 'Uploading...'
-                          : (logoUrlController.text.trim().isEmpty
-                                ? 'Upload Logo'
-                                : 'Replace Logo'),
-                    ),
-                  ),
-                ),
-                // Logo preview
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: logoUrlController,
-                  builder: (context, value, _) {
-                    final url = value.text.trim();
-                    if (url.isEmpty) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: _LogoPreview(url: url),
-                    );
-                  },
                 ),
                 const SizedBox(height: 16),
                 // Notes / family message textarea
@@ -459,34 +457,6 @@ class _FormBody extends StatelessWidget {
                   : const Text('Save'),
             ),
           ),
-
-          // ── Sign out ───────────────────────────────────────────────────
-          if (onSignOut != null) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: (saving || signOutBusy) ? null : onSignOut,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.statusCancelledFg,
-                  side: BorderSide(
-                    color: AppColors.statusCancelledFg.withValues(alpha: 0.4),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: signOutBusy
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.logout_rounded, size: 18),
-                label: const Text('Sign out'),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -558,69 +528,114 @@ class _FieldLabel extends StatelessWidget {
   }
 }
 
-// ── Logo preview ───────────────────────────────────────────────────────────────
+// ── Logo picker ────────────────────────────────────────────────────────────────
 
-class _LogoPreview extends StatelessWidget {
-  const _LogoPreview({required this.url});
-  final String url;
+class _LogoCirclePicker extends StatelessWidget {
+  const _LogoCirclePicker({
+    required this.logoUrlController,
+    required this.uploading,
+    required this.disabled,
+    required this.onUploadLogo,
+  });
+  final TextEditingController logoUrlController;
+  final bool uploading;
+  final bool disabled;
+  final VoidCallback onUploadLogo;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Logo preview',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              url,
-              height: 96,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Row(
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: logoUrlController,
+      builder: (context, value, _) {
+        final url = value.text.trim();
+        final hasLogo = url.isNotEmpty;
+
+        return Center(
+          child: Column(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Icon(
-                    Icons.broken_image_outlined,
-                    color: AppColors.statusCancelledFg,
-                    size: 20,
+                  GestureDetector(
+                    onTap: disabled ? null : onUploadLogo,
+                    child: Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border),
+                        color: AppColors.background,
+                      ),
+                      child: ClipOval(
+                        child: hasLogo
+                            ? Image.network(
+                                url,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 28,
+                                  color: AppColors.textSecondary,
+                                ),
+                                loadingBuilder: (context, child, progress) {
+                                  if (progress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                    ),
+                                  );
+                                },
+                              )
+                            : const Icon(
+                                Icons.home_work_outlined,
+                                size: 32,
+                                color: AppColors.textSecondary,
+                              ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Could not load image',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: disabled ? null : onUploadLogo,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Ink(
+                          width: 32,
+                          height: 32,
+                          decoration: const BoxDecoration(
+                            color: AppColors.accent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: uploading
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Icon(
+                                    hasLogo
+                                        ? Icons.edit_rounded
+                                        : Icons.upload_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return const SizedBox(
-                  height: 96,
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                );
-              },
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
