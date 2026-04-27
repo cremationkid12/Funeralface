@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
-import 'package:funeralface_mobile/features/settings/settings_state.dart';
-import 'package:funeralface_mobile/services/settings_services.dart';
+import 'package:everroute/features/settings/settings_state.dart';
+import 'package:everroute/services/settings_services.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
   SettingsCubit({required SettingsServices settingsServices})

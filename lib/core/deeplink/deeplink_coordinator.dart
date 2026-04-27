@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
-import 'package:funeralface_mobile/core/deeplink/deeplink_parser.dart';
+import 'package:everroute/core/deeplink/deeplink_parser.dart';
 import 'package:go_router/go_router.dart';
 
 /// Handles incoming app/universal links and routes family deep links in-app.

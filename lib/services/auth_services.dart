@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:funeralface_mobile/features/session/auth_session.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
+import 'package:everroute/features/session/auth_session.dart';
+import 'package:everroute/core/network/api_client.dart';
 
 Future<void> ensureBackendProvisioned(ApiClient api, String accessToken) async {
   await api.postJson(

@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/features/assignments/assignments_state.dart';
-import 'package:funeralface_mobile/services/assignments_services.dart';
+import 'package:everroute/features/assignments/assignments_state.dart';
+import 'package:everroute/services/assignments_services.dart';
 
 class AssignmentsCubit extends Cubit<AssignmentsState> {
   AssignmentsCubit({required AssignmentsServices assignmentsServices})

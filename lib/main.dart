@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/app/funeralface_app.dart';
-import 'package:funeralface_mobile/app/router/app_router.dart';
-import 'package:funeralface_mobile/core/deeplink/deeplink_coordinator.dart';
-import 'package:funeralface_mobile/core/env.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/services/auth_services.dart';
+import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/app/funeralface_app.dart';
+import 'package:everroute/app/router/app_router.dart';
+import 'package:everroute/core/deeplink/deeplink_coordinator.dart';
+import 'package:everroute/core/env.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/services/auth_services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

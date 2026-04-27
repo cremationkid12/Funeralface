@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
-import 'package:funeralface_mobile/features/session/staff_auth.dart';
-import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
-import 'package:funeralface_mobile/core/env.dart';
-import 'package:funeralface_mobile/core/family_share_token.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/services/assignments_services.dart';
-import 'package:funeralface_mobile/ui/widgets/app_status_chip.dart';
+import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/features/assignments/assignments_cubit.dart';
+import 'package:everroute/features/dashboard/dashboard_cubit.dart';
+import 'package:everroute/features/session/staff_auth.dart';
+import 'package:everroute/features/staff/staff_cubit.dart';
+import 'package:everroute/core/env.dart';
+import 'package:everroute/core/family_share_token.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/services/assignments_services.dart';
+import 'package:everroute/ui/widgets/app_status_chip.dart';
 
 class AssignmentDetailScreen extends StatefulWidget {
   const AssignmentDetailScreen({

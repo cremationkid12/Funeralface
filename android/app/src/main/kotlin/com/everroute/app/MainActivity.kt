@@ -1,4 +1,4 @@
-package com.example.funeralface_mobile
+package com.everroute.app
 
 import io.flutter.embedding.android.FlutterActivity
 

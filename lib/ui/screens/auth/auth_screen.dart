@@ -2,10 +2,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/features/auth/auth_cubit.dart';
-import 'package:funeralface_mobile/features/auth/auth_state.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/features/auth/auth_cubit.dart';
+import 'package:everroute/features/auth/auth_state.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 

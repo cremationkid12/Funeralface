@@ -1,8 +1,8 @@
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/services/assignments_services.dart';
-import 'package:funeralface_mobile/services/family_assignment_services.dart';
-import 'package:funeralface_mobile/services/settings_services.dart';
-import 'package:funeralface_mobile/services/staff_services.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/services/assignments_services.dart';
+import 'package:everroute/services/family_assignment_services.dart';
+import 'package:everroute/services/settings_services.dart';
+import 'package:everroute/services/staff_services.dart';
 
 /// Shared repositories and use cases for the staff app shell.
 class AppRepositories {

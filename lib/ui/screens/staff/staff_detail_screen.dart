@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
-import 'package:funeralface_mobile/features/session/staff_auth.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/services/staff_services.dart';
+import 'package:everroute/features/staff/staff_cubit.dart';
+import 'package:everroute/features/session/staff_auth.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/services/staff_services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class StaffDetailScreen extends StatefulWidget {

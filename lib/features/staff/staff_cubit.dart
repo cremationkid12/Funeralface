@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/features/staff/staff_state.dart';
-import 'package:funeralface_mobile/services/staff_services.dart';
+import 'package:everroute/features/staff/staff_state.dart';
+import 'package:everroute/services/staff_services.dart';
 
 class StaffCubit extends Cubit<StaffState> {
   StaffCubit({required StaffServices staffServices})

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:funeralface_mobile/core/theme/app_theme.dart';
+import 'package:everroute/core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class RoleChip extends StatelessWidget {

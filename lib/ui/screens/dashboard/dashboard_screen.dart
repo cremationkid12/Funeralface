@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/features/session/auth_session.dart';
-import 'package:funeralface_mobile/features/session/staff_auth.dart';
-import 'package:funeralface_mobile/core/env.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
-import 'package:funeralface_mobile/ui/widgets/app_status_chip.dart';
-import 'package:funeralface_mobile/ui/screens/dashboard/widgets/stat_card.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_state.dart';
+import 'package:everroute/features/session/auth_session.dart';
+import 'package:everroute/features/session/staff_auth.dart';
+import 'package:everroute/core/env.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/features/dashboard/dashboard_cubit.dart';
+import 'package:everroute/ui/widgets/app_status_chip.dart';
+import 'package:everroute/ui/screens/dashboard/widgets/stat_card.dart';
+import 'package:everroute/features/dashboard/dashboard_state.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:funeralface_mobile/services/auth_services.dart';
+import 'package:everroute/services/auth_services.dart';
 
 const double _kStatCardOverlap = 70;
 const double _kHeaderBottomPadding = 90;

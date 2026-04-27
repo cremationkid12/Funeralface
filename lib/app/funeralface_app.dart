@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/features/auth/auth_cubit.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
-import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
-import 'package:funeralface_mobile/services/auth_services.dart';
-import 'package:funeralface_mobile/core/theme/app_theme.dart';
+import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/features/auth/auth_cubit.dart';
+import 'package:everroute/features/dashboard/dashboard_cubit.dart';
+import 'package:everroute/features/staff/staff_cubit.dart';
+import 'package:everroute/services/auth_services.dart';
+import 'package:everroute/core/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 

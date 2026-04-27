@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/features/assignments/assignments_cubit.dart';
-import 'package:funeralface_mobile/features/assignments/assignments_state.dart';
-import 'package:funeralface_mobile/features/dashboard/dashboard_cubit.dart';
-import 'package:funeralface_mobile/features/staff/staff_cubit.dart';
-import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/features/session/staff_auth.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/ui/screens/assignments/widgets/assignment_card.dart';
-import 'package:funeralface_mobile/ui/widgets/app_status_chip.dart';
+import 'package:everroute/features/assignments/assignments_cubit.dart';
+import 'package:everroute/features/assignments/assignments_state.dart';
+import 'package:everroute/features/dashboard/dashboard_cubit.dart';
+import 'package:everroute/features/staff/staff_cubit.dart';
+import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/features/session/staff_auth.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
+import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 

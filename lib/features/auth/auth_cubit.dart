@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/features/auth/auth_state.dart';
-import 'package:funeralface_mobile/services/auth_services.dart'
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/features/auth/auth_state.dart';
+import 'package:everroute/services/auth_services.dart'
     as auth_services;
 import 'package:google_sign_in/google_sign_in.dart';
 

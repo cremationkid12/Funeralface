@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:funeralface_mobile/app/app_repositories.dart';
-import 'package:funeralface_mobile/features/settings/settings_cubit.dart';
-import 'package:funeralface_mobile/features/settings/settings_state.dart';
-import 'package:funeralface_mobile/features/session/staff_auth.dart';
-import 'package:funeralface_mobile/features/session/auth_session.dart';
-import 'package:funeralface_mobile/core/network/api_client.dart';
-import 'package:funeralface_mobile/core/theme/app_theme.dart';
-import 'package:funeralface_mobile/services/auth_services.dart';
-import 'package:funeralface_mobile/services/staff_services.dart';
+import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/features/settings/settings_cubit.dart';
+import 'package:everroute/features/settings/settings_state.dart';
+import 'package:everroute/features/session/staff_auth.dart';
+import 'package:everroute/features/session/auth_session.dart';
+import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/services/auth_services.dart';
+import 'package:everroute/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:funeralface_mobile/ui/screens/settings/widgets/funeral_home_tab.dart';
-import 'package:funeralface_mobile/ui/screens/settings/widgets/my_profile_tab.dart';
+import 'package:everroute/ui/screens/settings/widgets/funeral_home_tab.dart';
+import 'package:everroute/ui/screens/settings/widgets/my_profile_tab.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
