@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:everroute/core/env.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/features/auth/auth_state.dart';
-import 'package:everroute/services/auth_services.dart'
-    as auth_services;
+import 'package:everroute/services/auth_services.dart' as auth_services;
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthCubit extends Cubit<AuthState> {
@@ -79,8 +79,6 @@ class AuthCubit extends Cubit<AuthState> {
         result.accessToken,
       );
       emit(const AuthState(success: true));
-    } on ApiException catch (e) {
-      emit(AuthState(error: e.toString()));
     } catch (e) {
       emit(AuthState(error: e.toString()));
     }
@@ -103,8 +101,24 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> loginWithGoogle({required ApiClient apiClient}) async {
     emit(const AuthState(busy: true));
     try {
-      await _googleSignIn.initialize();
-      final account = await _googleSignIn.authenticate();
+      final serverClientId = AppEnv.googleWebClientId.trim();
+      if (serverClientId.isEmpty) {
+        emit(
+          const AuthState(
+            error:
+                'Google sign-in is not configured. Set GOOGLE_WEB_CLIENT_ID in your env.',
+          ),
+        );
+        return;
+      }
+      await _googleSignIn.initialize(serverClientId: serverClientId);
+      GoogleSignInAccount? account;
+      try {
+        account = await _googleSignIn.attemptLightweightAuthentication();
+      } catch (_) {
+        account = null;
+      }
+      account ??= await _googleSignIn.authenticate();
       final auth = account.authentication;
       final idToken = auth.idToken;
       if (idToken == null || idToken.isEmpty) {
@@ -122,7 +136,18 @@ class AuthCubit extends Cubit<AuthState> {
       );
       emit(const AuthState(success: true));
     } catch (e) {
-      emit(AuthState(error: e.toString()));
+      final message = e.toString();
+      if (message.contains('No credential available')) {
+        emit(
+          const AuthState(
+            error:
+                'Google account credential was not found on this device. '
+                'Check Google Cloud OAuth Android client package/SHA config and ensure a Google account is signed in on the device/emulator.',
+          ),
+        );
+        return;
+      }
+      emit(AuthState(error: message));
     }
   }
 }

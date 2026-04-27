@@ -8,7 +8,7 @@ Runtime values come from **`flutter_dotenv`**: on startup the app loads project-
 
 Non-empty **`--dart-define=...`** entries still override the same keys (useful in CI without checking in secrets).
 
-On **Android**, `dev`, `staging`, and `prod` product flavors are defined (P4.1). Pass `--flavor` for `flutter run` / `flutter build apk`. Use `prod` for release-style builds (no application id suffix). **iOS** does not mirror flavors yet.
+On **Android**, the app now uses a single default variant (no product flavors), so you can run with plain `flutter run` / `flutter build apk`.
 
 For a physical device, use your machine LAN IP instead of `localhost` in `.env` where applicable.
 
@@ -27,5 +27,5 @@ For a physical device, use your machine LAN IP instead of `localhost` in `.env` 
 - Runtime link ingestion is wired through `app_links` in `main.dart` and routes matching links to `/family/<token>` only.
 - **Staff copy URL:** `FAMILY_LINK_BASE` (default `https://links.funeralface.app`) is used on the assignment detail screen when generating/copying a family link so the clipboard matches your verified host. Override with `--dart-define=FAMILY_LINK_BASE=https://your-staging-host.example` when testing.
 
-Manual check: `flutter run --flavor dev ...` then open
+Manual check: run the app with `flutter run`, then open
 `http://localhost:<port>/family/<token>` is not available from the browser; use `adb shell am start -a android.intent.action.VIEW -d "https://links.funeralface.app/family/<token>"` after updating the host to match your manifest.

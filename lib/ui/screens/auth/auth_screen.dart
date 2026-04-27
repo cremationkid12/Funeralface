@@ -210,31 +210,10 @@ class _AuthScreenState extends State<AuthScreen> {
                         label: _isLogin ? 'Or Login with' : 'Or Signup with',
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SocialButton(
-                              label: 'Google',
-                              icon: _GoogleIcon(),
-                              onTap: authState.busy ? () {} : _onGoogleTap,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _SocialButton(
-                              label: 'Facebook',
-                              icon: _FacebookIcon(),
-                              onTap: () =>
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Facebook sign-in coming soon.',
-                                      ),
-                                    ),
-                                  ),
-                            ),
-                          ),
-                        ],
+                      _SocialButton(
+                        label: 'Google',
+                        icon: _GoogleIcon(),
+                        onTap: authState.busy ? () {} : _onGoogleTap,
                       ),
                       const SizedBox(height: 16),
                       _SwitchModeText(isLogin: _isLogin, onSwitch: _switchMode),
@@ -905,29 +884,4 @@ class _GooglePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _FacebookIcon extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 20,
-      height: 20,
-      decoration: const BoxDecoration(
-        color: Color(0xFF1877F2),
-        shape: BoxShape.circle,
-      ),
-      child: const Center(
-        child: Text(
-          'f',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            height: 1,
-          ),
-        ),
-      ),
-    );
-  }
 }

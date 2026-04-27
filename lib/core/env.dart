@@ -36,12 +36,6 @@ class AppEnv {
     'http://localhost:8010',
   );
 
-  static String get appEnv => _afterDefine(
-    'APP_ENV',
-    const String.fromEnvironment('APP_ENV', defaultValue: ''),
-    'development',
-  );
-
   static String get deeplinkHost => _afterDefine(
     'DEEPLINK_HOST',
     const String.fromEnvironment('DEEPLINK_HOST', defaultValue: ''),
@@ -73,19 +67,13 @@ class AppEnv {
     '',
   );
 
+  /// Google OAuth Web client ID used as `serverClientId` for Android sign-in.
+  static String get googleWebClientId => _afterDefine(
+    'GOOGLE_WEB_CLIENT_ID',
+    const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: ''),
+    '',
+  );
+
   static bool get hasSupabaseAuthConfig =>
       supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;
-
-  static String get flavor {
-    switch (appEnv.toLowerCase()) {
-      case 'production':
-      case 'prod':
-        return 'prod';
-      case 'staging':
-      case 'stage':
-        return 'staging';
-      default:
-        return 'dev';
-    }
-  }
 }

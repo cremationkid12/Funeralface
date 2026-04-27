@@ -89,7 +89,6 @@ class AssignmentsCubit extends Cubit<AssignmentsState> {
         payload: payload,
         bearerToken: bearerToken,
       );
-      print('updated: $updated');
       final nextItems = _upsertAssignment(state.items, updated);
       emit(
         state.copyWith(
@@ -100,7 +99,6 @@ class AssignmentsCubit extends Cubit<AssignmentsState> {
       );
       return updated;
     } catch (error) {
-      print('error: $error');
       emit(state.copyWith(submitting: false, error: error.toString()));
       rethrow;
     }
