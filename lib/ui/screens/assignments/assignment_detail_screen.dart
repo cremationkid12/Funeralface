@@ -9,6 +9,7 @@ import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/assignments_services.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 
@@ -464,21 +465,19 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     if (shareUrl != null) ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: SelectableText(
-                              shareUrl,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Copy link',
-                            onPressed: _saving ? null : _copyFamilyLink,
-                            icon: const Icon(Icons.copy, size: 20),
-                          ),
-                        ],
+                      SelectableText(
+                        shareUrl,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: _saving ? null : _copyFamilyLink,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.copy),
+                        label: const Text('Copy Link'),
                       ),
                       const SizedBox(height: 10),
                       FilledButton.icon(
