@@ -1,15 +1,31 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:everroute/core/app_flavor.dart';
 
-/// Loads project-root `.env` (Flutter asset; see `pubspec.yaml`) then
-/// `assets/env.default`. The parser keeps the first value per key, so user
-/// `.env` is concatenated first and bundled defaults only fill missing keys.
+/// Loads `assets/.env` as the base config. When the active flavor is [AppFlavor.dev],
+/// also loads optional `assets/.env.dev` (must live under `assets/` in `pubspec.yaml`);
+/// dev keys override the base file per `flutter_dotenv` merge rules.
 Future<void> loadAppDotenv() async {
-  final parts = <String>[];
+  var base = '';
   try {
-    parts.add(await rootBundle.loadString('assets/.env'));
+    base = await rootBundle.loadString('assets/.env');
   } catch (_) {}
-  dotenv.loadFromString(envString: parts.join('\n'), isOptional: true);
+
+  final overrides = <String>[];
+  if (parseAppFlavor() == AppFlavor.dev) {
+    try {
+      final dev = await rootBundle.loadString('assets/.env.dev');
+      if (dev.trim().isNotEmpty) {
+        overrides.add(dev);
+      }
+    } catch (_) {}
+  }
+
+  dotenv.loadFromString(
+    envString: base,
+    overrideWith: overrides,
+    isOptional: true,
+  );
 }
 
 /// App configuration from [loadAppDotenv] / `flutter_dotenv`, with non-empty

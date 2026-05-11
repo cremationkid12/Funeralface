@@ -40,6 +40,7 @@ class FuneralfaceApp extends StatelessWidget {
       child: MaterialApp.router(
         title: 'Everroute',
         theme: AppTheme.light,
+        debugShowCheckedModeBanner: false,
         routerConfig: routerConfig,
       ),
     );

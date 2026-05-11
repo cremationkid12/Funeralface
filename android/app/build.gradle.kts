@@ -1,3 +1,4 @@
+import com.android.build.gradle.AppExtension
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -39,9 +40,21 @@ android {
         }
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "Everroute Dev")
+        }
+        create("prod") {
+            dimension = "environment"
+            resValue("string", "app_name", "Everroute")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.everroute.app"
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -49,7 +62,10 @@ android {
     }
 
     buildTypes {
-        release {
+        getByName("debug") {
+            // Default debug settings.
+        }
+        getByName("release") {
             signingConfig =
                 if (keystorePropertiesFile.exists()) {
                     signingConfigs.getByName("release")
@@ -62,4 +78,15 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// `devRelease` is debug-signed so you can sideload without `key.properties`.
+// `prodRelease` keeps the upload keystore for Play Console.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        if (variant.name == "devRelease") {
+            val appExt = extensions.getByType(AppExtension::class.java)
+            variant.signingConfig.setConfig(appExt.signingConfigs.getByName("debug"))
+        }
+    }
 }
