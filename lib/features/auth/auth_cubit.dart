@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/features/auth/auth_error_messages.dart';
 import 'package:everroute/features/auth/auth_state.dart';
 import 'package:everroute/services/auth_services.dart' as auth_services;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -48,7 +49,7 @@ class AuthCubit extends Cubit<AuthState> {
       );
       emit(const AuthState(success: true));
     } catch (e) {
-      emit(AuthState(error: e.toString()));
+      emit(AuthState(error: friendlyAuthError(e, AuthAction.login)));
     }
   }
 
@@ -80,7 +81,7 @@ class AuthCubit extends Cubit<AuthState> {
       );
       emit(const AuthState(success: true));
     } catch (e) {
-      emit(AuthState(error: e.toString()));
+      emit(AuthState(error: friendlyAuthError(e, AuthAction.register)));
     }
   }
 
@@ -90,11 +91,12 @@ class AuthCubit extends Cubit<AuthState> {
       await _authServices.recoverPassword(email: email);
       emit(
         const AuthState(
-          info: 'Password reset email sent if the account exists.',
+          info:
+              'If an account exists for that email, a password reset link has been sent.',
         ),
       );
     } catch (e) {
-      emit(AuthState(error: e.toString()));
+      emit(AuthState(error: friendlyAuthError(e, AuthAction.recover)));
     }
   }
 
@@ -106,7 +108,7 @@ class AuthCubit extends Cubit<AuthState> {
         emit(
           const AuthState(
             error:
-                'Google sign-in is not configured. Set GOOGLE_WEB_CLIENT_ID in your env.',
+                'Google sign-in is currently unavailable. Please use email sign-in.',
           ),
         );
         return;
@@ -124,7 +126,8 @@ class AuthCubit extends Cubit<AuthState> {
       if (idToken == null || idToken.isEmpty) {
         emit(
           const AuthState(
-            error: 'Google sign-in failed to provide an ID token.',
+            error:
+                "We couldn't sign you in with Google. Please try again.",
           ),
         );
         return;
@@ -136,18 +139,7 @@ class AuthCubit extends Cubit<AuthState> {
       );
       emit(const AuthState(success: true));
     } catch (e) {
-      final message = e.toString();
-      if (message.contains('No credential available')) {
-        emit(
-          const AuthState(
-            error:
-                'Google account credential was not found on this device. '
-                'Check Google Cloud OAuth Android client package/SHA config and ensure a Google account is signed in on the device/emulator.',
-          ),
-        );
-        return;
-      }
-      emit(AuthState(error: message));
+      emit(AuthState(error: friendlyAuthError(e, AuthAction.google)));
     }
   }
 }

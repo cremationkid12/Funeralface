@@ -18,6 +18,16 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Drop any stale auth message left over from a previous screen visit
+    // so the snackbar listener only fires for fresh, in-screen events.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AuthCubit>().clearMessages();
+    });
+  }
+
   // true = Login view, false = Signup view
   bool _isLogin = true;
 
@@ -127,7 +137,18 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     }
 
-    return BlocBuilder<AuthCubit, AuthState>(
+    return BlocConsumer<AuthCubit, AuthState>(
+      listenWhen: (prev, curr) =>
+          prev.error != curr.error || prev.info != curr.info,
+      listener: (context, state) {
+        if (state.error != null) {
+          EverrouteSnackBar.error(context, state.error!);
+          context.read<AuthCubit>().clearMessages();
+        } else if (state.info != null) {
+          EverrouteSnackBar.info(context, state.info!);
+          context.read<AuthCubit>().clearMessages();
+        }
+      },
       builder: (context, authState) => Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
@@ -156,16 +177,6 @@ class _AuthScreenState extends State<AuthScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Error / info banners
-                      if (authState.error != null) ...[
-                        _StatusBanner(message: authState.error!, isError: true),
-                        const SizedBox(height: 12),
-                      ],
-                      if (authState.info != null) ...[
-                        _StatusBanner(message: authState.info!, isError: false),
-                        const SizedBox(height: 12),
-                      ],
-
                       if (_isLogin)
                         _LoginForm(
                           emailController: _loginEmail,
@@ -768,34 +779,6 @@ class _SwitchModeText extends StatelessWidget {
             recognizer: TapGestureRecognizer()..onTap = onSwitch,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatusBanner extends StatelessWidget {
-  const _StatusBanner({required this.message, required this.isError});
-
-  final String message;
-  final bool isError;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isError ? const Color(0xFFC62828) : AppColors.primary;
-    final bg = isError ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5EE);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        message,
-        style: GoogleFonts.poppins(
-          fontSize: 13,
-          color: color,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }
