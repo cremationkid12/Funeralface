@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:everroute/ui/screens/settings/widgets/funeral_home_tab.dart';
 import 'package:everroute/ui/screens/settings/widgets/my_profile_tab.dart';
+import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -586,23 +587,14 @@ class _SignOutModal extends StatelessWidget {
             ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Sign out'),
-            ),
+          AppPrimaryButton(
+            label: 'Sign out',
+            onPressed: () => Navigator.of(context).pop(true),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
-              child: const Text('Cancel'),
-            ),
+          AppAccentButton(
+            label: 'Cancel',
+            onPressed: () => Navigator.of(context).pop(false),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class MyProfileTab extends StatelessWidget {
@@ -128,21 +129,10 @@ class MyProfileTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 52,
-            child: FilledButton(
-              onPressed: saving ? null : onSave,
-              child: saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Save'),
-            ),
+          AppPrimaryButton(
+            label: 'Save',
+            busy: saving,
+            onPressed: onSave,
           ),
         ],
       ),

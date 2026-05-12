@@ -9,8 +9,8 @@ import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/core/network/api_client.dart';
-import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/assignments_services.dart';
+import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 
@@ -456,20 +456,16 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 10),
-                      FilledButton.icon(
+                      AppAccentButton(
+                        label: 'Copy Link',
+                        icon: Icons.copy,
                         onPressed: _saving ? null : _copyFamilyLink,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.copy),
-                        label: const Text('Copy Link'),
                       ),
                       const SizedBox(height: 10),
-                      FilledButton.icon(
+                      AppPrimaryButton(
+                        label: 'Share Link',
+                        icon: Icons.send,
                         onPressed: _saving ? null : _openShareFamilyLinkSheet,
-                        icon: const Icon(Icons.send),
-                        label: const Text('Share Link'),
                       ),
                       if (_shareExpiresIso != null &&
                           _shareExpiresIso!.isNotEmpty)

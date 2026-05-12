@@ -5,6 +5,7 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/staff_services.dart';
+import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -427,16 +428,10 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                   const SizedBox(height: 24),
 
                   // ── Remove button ────────────────────────────────────────
-                  SizedBox(
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _busy ? null : _confirmDelete,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                      ),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                      label: const Text('Remove Staff Member'),
-                    ),
+                  AppAccentButton(
+                    label: 'Remove Staff Member',
+                    icon: Icons.delete_outline_rounded,
+                    onPressed: _busy ? null : _confirmDelete,
                   ),
                 ],
               ),

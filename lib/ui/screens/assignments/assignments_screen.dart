@@ -9,6 +9,7 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
+import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:go_router/go_router.dart';
@@ -587,36 +588,17 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Green create button
-              SizedBox(
-                height: 52,
-                child: FilledButton(
-                  onPressed: _submitting ? null : _submit,
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Create'),
-                ),
+              AppPrimaryButton(
+                label: 'Create',
+                busy: _submitting,
+                onPressed: _submit,
               ),
               const SizedBox(height: 10),
-              // Orange cancel button
-              SizedBox(
-                height: 52,
-                child: FilledButton(
-                  onPressed: _submitting
-                      ? null
-                      : () => Navigator.of(context).pop(false),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                  ),
-                  child: const Text('Cancel'),
-                ),
+              AppAccentButton(
+                label: 'Cancel',
+                onPressed: _submitting
+                    ? null
+                    : () => Navigator.of(context).pop(false),
               ),
             ],
           ),

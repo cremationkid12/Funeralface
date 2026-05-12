@@ -6,6 +6,7 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/ui/screens/staff/widgets/staff_card.dart';
+import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:everroute/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
@@ -363,13 +364,14 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
                 onChanged: (v) => setState(() => _role = v ?? 'user'),
               ),
               const SizedBox(height: 24),
-              _SheetPrimaryButton(
+              AppPrimaryButton(
                 label: 'Create',
                 busy: _submitting,
                 onPressed: _submit,
               ),
               const SizedBox(height: 10),
-              _SheetCancelButton(
+              AppAccentButton(
+                label: 'Cancel',
                 onPressed: _submitting
                     ? null
                     : () => Navigator.of(context).pop(null),
@@ -484,13 +486,14 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                 },
               ),
               const SizedBox(height: 24),
-              _SheetPrimaryButton(
+              AppPrimaryButton(
                 label: 'Send Invite',
                 busy: _submitting,
                 onPressed: _submit,
               ),
               const SizedBox(height: 10),
-              _SheetCancelButton(
+              AppAccentButton(
+                label: 'Cancel',
                 onPressed: _submitting
                     ? null
                     : () => Navigator.of(context).pop(false),
@@ -623,56 +626,6 @@ class _RoleDropdown extends StatelessWidget {
           onChanged: enabled ? onChanged : null,
         ),
       ],
-    );
-  }
-}
-
-class _SheetPrimaryButton extends StatelessWidget {
-  const _SheetPrimaryButton({
-    required this.label,
-    required this.busy,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool busy;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: FilledButton(
-        onPressed: busy ? null : onPressed,
-        child: busy
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(label),
-      ),
-    );
-  }
-}
-
-class _SheetCancelButton extends StatelessWidget {
-  const _SheetCancelButton({this.onPressed});
-
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
-        child: const Text('Cancel'),
-      ),
     );
   }
 }
