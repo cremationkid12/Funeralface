@@ -27,6 +27,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   late final TextEditingController _name;
   late final TextEditingController _phone;
   late final TextEditingController _email;
+  late final TextEditingController _bio;
   String _role = 'user';
   late bool _active;
   bool _busy = false;
@@ -43,6 +44,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
     _email = TextEditingController(
       text: widget.initial['email']?.toString() ?? '',
     );
+    _bio = TextEditingController(text: widget.initial['bio']?.toString() ?? '');
     final r = widget.initial['role']?.toString();
     _role = r != null && StaffServices.roles.contains(r) ? r : 'user';
     final a = widget.initial['active'];
@@ -54,6 +56,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _bio.dispose();
     super.dispose();
   }
 
@@ -68,6 +71,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
         'role': _role,
         'active': _active,
         'email': _email.text.trim().isEmpty ? null : _email.text.trim(),
+        'bio': _bio.text.trim().isEmpty ? null : _bio.text.trim(),
       };
       final updated = await context.read<StaffCubit>().updateStaff(
         id: widget.staffId,
@@ -347,6 +351,24 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                         icon: Icons.mail_outline_rounded,
                         keyboardType: TextInputType.emailAddress,
                         enabled: !_busy,
+                      ),
+                      const SizedBox(height: 14),
+                      _DetailFieldLabel('Bio'),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _bio,
+                        enabled: !_busy,
+                        maxLines: 3,
+                        textInputAction: TextInputAction.newline,
+                        style: GoogleFonts.poppins(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Write a short bio ...',
+                          hintStyle: GoogleFonts.poppins(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                          ),
+                          contentPadding: const EdgeInsets.all(14),
+                        ),
                       ),
                       const SizedBox(height: 14),
                       // Role dropdown
