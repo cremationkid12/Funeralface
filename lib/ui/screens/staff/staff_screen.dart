@@ -6,6 +6,7 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/ui/screens/staff/widgets/staff_card.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:everroute/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -291,19 +292,13 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
       await widget.onCreate(payload);
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Staff member created')));
+      EverrouteSnackBar.success(context, 'Staff member created');
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -418,24 +413,19 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
       await widget.onInvite(_email.text.trim());
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Invite sent. The team member should check their email inbox.',
-          ),
-        ),
+      EverrouteSnackBar.success(
+        context,
+        'Invite sent. The team member should check their email inbox.',
       );
     } on ApiException catch (e) {
       if (!mounted) return;
       final msg = e.statusCode == 403
           ? 'Forbidden: admin role required to invite.'
           : e.message;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      EverrouteSnackBar.error(context, msg);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

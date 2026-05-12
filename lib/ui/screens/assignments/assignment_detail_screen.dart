@@ -12,6 +12,7 @@ import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/assignments_services.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 
 class AssignmentDetailScreen extends StatefulWidget {
   const AssignmentDetailScreen({
@@ -124,8 +125,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         items = staffCubit.state.items;
       } catch (_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to load staff list right now.')),
+        EverrouteSnackBar.error(
+          context,
+          'Unable to load staff list right now.',
         );
       } finally {
         if (mounted) setState(() => _loadingStaff = false);
@@ -152,9 +154,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       setState(() => _staffOptions = options);
     } catch (_) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to load staff list right now.')),
-      );
+      EverrouteSnackBar.error(context, 'Unable to load staff list right now.');
     }
   }
 
@@ -185,19 +185,13 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       _applyAssignmentResponse(body);
       _didUpdate = true;
       await context.read<DashboardCubit>().refresh(bearerToken: token);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Assignment saved')));
+      EverrouteSnackBar.success(context, 'Assignment saved');
     } on ApiException catch (e) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -214,9 +208,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       ClipboardData(text: AppEnv.familyShareUrlForToken(t)),
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Link copied')));
+    EverrouteSnackBar.success(context, 'Link copied');
   }
 
   Future<String?> _issueShareToken() async {
@@ -241,14 +233,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       return resolvedToken;
     } on ApiException catch (e) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return null;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -284,9 +272,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       ),
     );
     if (sent == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Family link sent by email.')),
-      );
+      EverrouteSnackBar.success(context, 'Family link sent by email.');
     }
   }
 
@@ -557,14 +543,10 @@ class _ShareFamilyLinkSheetState extends State<_ShareFamilyLinkSheet> {
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

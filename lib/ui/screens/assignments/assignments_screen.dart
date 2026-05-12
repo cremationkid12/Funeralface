@@ -10,6 +10,7 @@ import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -67,19 +68,16 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
         status: status,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Status updated to ${statusLabel(status)}')),
+      EverrouteSnackBar.success(
+        context,
+        'Status updated to ${statusLabel(status)}',
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     }
   }
 
@@ -89,14 +87,10 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       staffOptions = await _loadAssignableStaffOptions();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     }
 
     final created = await showModalBottomSheet<bool>(
@@ -120,9 +114,8 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     if (token != null) {
       await context.read<DashboardCubit>().refresh(bearerToken: token);
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Assignment created')));
+    if (!mounted) return;
+    EverrouteSnackBar.success(context, 'Assignment created');
   }
 
   Future<List<_AssignableStaffOption>> _loadAssignableStaffOptions() async {
@@ -438,14 +431,10 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
       Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

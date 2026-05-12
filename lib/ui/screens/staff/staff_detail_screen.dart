@@ -5,6 +5,7 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/staff_services.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class StaffDetailScreen extends StatefulWidget {
@@ -73,20 +74,14 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
         bearerToken: token,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Staff member saved')));
+      EverrouteSnackBar.success(context, 'Staff member saved');
       Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -120,20 +115,17 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
       }
       if (!mounted) return;
       setState(() => _active = next);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(next ? 'Staff activated' : 'Staff deactivated')),
+      EverrouteSnackBar.success(
+        context,
+        next ? 'Staff activated' : 'Staff deactivated',
       );
       Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -157,19 +149,13 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
       );
       if (!mounted) return;
       Navigator.of(context).pop({'deleted': true, 'id': widget.staffId});
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Staff member removed')));
+      EverrouteSnackBar.success(context, 'Staff member removed');
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }

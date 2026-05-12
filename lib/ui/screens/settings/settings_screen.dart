@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:everroute/ui/screens/settings/widgets/funeral_home_tab.dart';
 import 'package:everroute/ui/screens/settings/widgets/my_profile_tab.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -152,19 +153,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Funeral Home information saved')),
-      );
+      EverrouteSnackBar.success(context, 'Funeral Home information saved');
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     }
   }
 
@@ -187,19 +182,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Profile saved')));
+      EverrouteSnackBar.success(context, 'Profile saved');
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _profileSaving = false);
     }
@@ -231,19 +220,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       _myProfileImageUrl.text = imageUrl;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile image uploaded and saved')),
-      );
+      EverrouteSnackBar.success(context, 'Profile image uploaded and saved');
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _profileImageUploading = false);
     }
@@ -263,9 +246,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context.go('/auth');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     } finally {
       if (mounted) setState(() => _signOutBusy = false);
     }
@@ -294,19 +275,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Logo uploaded and saved')));
+      EverrouteSnackBar.success(context, 'Logo uploaded and saved');
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     }
   }
 

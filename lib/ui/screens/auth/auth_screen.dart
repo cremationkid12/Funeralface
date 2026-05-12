@@ -6,6 +6,7 @@ import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/auth/auth_cubit.dart';
 import 'package:everroute/features/auth/auth_state.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -479,10 +480,9 @@ class _SignupForm extends StatelessWidget {
                       ),
                       recognizer: TapGestureRecognizer()
                         ..onTap = () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Terms & Conditions coming soon.'),
-                            ),
+                          EverrouteSnackBar.info(
+                            context,
+                            'Terms & Conditions coming soon.',
                           );
                         },
                     ),

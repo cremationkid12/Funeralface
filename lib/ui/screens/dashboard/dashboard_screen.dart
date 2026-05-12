@@ -7,6 +7,7 @@ import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/dashboard/dashboard_cubit.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:everroute/ui/screens/dashboard/widgets/stat_card.dart';
 import 'package:everroute/features/dashboard/dashboard_state.dart';
 import 'package:go_router/go_router.dart';
@@ -78,15 +79,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       await ensureBackendProvisioned(api, token);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account linked. Loading dashboard…')),
-      );
+      EverrouteSnackBar.info(context, 'Account linked. Loading dashboard…');
       await _dashboardCubit.refresh(bearerToken: token);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      EverrouteSnackBar.error(context, e.toString());
     }
   }
 
