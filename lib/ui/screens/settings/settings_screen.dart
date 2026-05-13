@@ -195,14 +195,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _pickAndUploadProfileImage() async {
+  Future<void> _pickAndUploadProfileImage(ImageSource source) async {
     final token = staffBearerToken();
     if (token == null) return;
     final userId = AuthSession.instance.userId?.trim();
     if (userId == null || userId.isEmpty) return;
     try {
       final picked = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 90,
       );
       if (picked == null) return;
@@ -253,12 +253,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _pickAndUploadLogo() async {
+  Future<void> _pickAndUploadLogo(ImageSource source) async {
     final token = staffBearerToken();
     if (token == null) return;
     try {
       final picked = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 90,
       );
       if (picked == null) return;
@@ -404,7 +404,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         logoUploading: state.logoUploading,
                                         editable: _isAdmin,
                                         onSave: _saveFuneralHome,
-                                        onUploadLogo: _pickAndUploadLogo,
+                                        onPickLogo: _pickAndUploadLogo,
                                       ),
                                       MyProfileTab(
                                         formKey: _profileFormKey,
@@ -416,8 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         role: _myRole,
                                         saving: _profileSaving,
                                         imageUploading: _profileImageUploading,
-                                        onUploadImage:
-                                            _pickAndUploadProfileImage,
+                                        onPickImage: _pickAndUploadProfileImage,
                                         onSave: _saveMyProfile,
                                       ),
                                     ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/ui/widgets/profile_image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class FuneralHomeTab extends StatelessWidget {
@@ -15,7 +16,7 @@ class FuneralHomeTab extends StatelessWidget {
     required this.logoUploading,
     required this.editable,
     required this.onSave,
-    required this.onUploadLogo,
+    required this.onPickLogo,
   });
 
   final GlobalKey<FormState> formKey;
@@ -28,7 +29,7 @@ class FuneralHomeTab extends StatelessWidget {
   final bool logoUploading;
   final bool editable;
   final VoidCallback onSave;
-  final VoidCallback onUploadLogo;
+  final ProfileImagePickCallback onPickLogo;
 
   @override
   Widget build(BuildContext context) {
@@ -53,11 +54,12 @@ class FuneralHomeTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _LogoCirclePicker(
-                  logoUrlController: logoUrlController,
+                ProfileImagePicker(
+                  imageUrlController: logoUrlController,
                   uploading: logoUploading,
                   disabled: !editable || saving || logoUploading,
-                  onUploadLogo: onUploadLogo,
+                  onPickImage: onPickLogo,
+                  emptyIcon: Icons.home_work_outlined,
                 ),
                 const SizedBox(height: 20),
                 _SettingsField(
@@ -206,116 +208,6 @@ class _FieldLabel extends StatelessWidget {
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
       ),
-    );
-  }
-}
-
-class _LogoCirclePicker extends StatelessWidget {
-  const _LogoCirclePicker({
-    required this.logoUrlController,
-    required this.uploading,
-    required this.disabled,
-    required this.onUploadLogo,
-  });
-  final TextEditingController logoUrlController;
-  final bool uploading;
-  final bool disabled;
-  final VoidCallback onUploadLogo;
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: logoUrlController,
-      builder: (context, value, _) {
-        final url = value.text.trim();
-        final hasLogo = url.isNotEmpty;
-
-        return Center(
-          child: Column(
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  GestureDetector(
-                    onTap: disabled ? null : onUploadLogo,
-                    child: Container(
-                      width: 104,
-                      height: 104,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border),
-                        color: AppColors.background,
-                      ),
-                      child: ClipOval(
-                        child: hasLogo
-                            ? Image.network(
-                                url,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.broken_image_outlined,
-                                  size: 28,
-                                  color: AppColors.textSecondary,
-                                ),
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return const Center(
-                                    child: CircularProgressIndicator(
-                                      color: AppColors.primary,
-                                    ),
-                                  );
-                                },
-                              )
-                            : const Icon(
-                                Icons.home_work_outlined,
-                                size: 32,
-                                color: AppColors.textSecondary,
-                              ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: disabled ? null : onUploadLogo,
-                        borderRadius: BorderRadius.circular(16),
-                        child: Ink(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: uploading
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Icon(
-                                    hasLogo
-                                        ? Icons.edit_rounded
-                                        : Icons.upload_rounded,
-                                    size: 16,
-                                    color: Colors.white,
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

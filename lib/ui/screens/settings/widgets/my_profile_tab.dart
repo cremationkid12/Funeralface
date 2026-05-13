@@ -16,7 +16,7 @@ class MyProfileTab extends StatelessWidget {
     required this.role,
     required this.saving,
     required this.imageUploading,
-    required this.onUploadImage,
+    required this.onPickImage,
     required this.onSave,
   });
 
@@ -29,7 +29,7 @@ class MyProfileTab extends StatelessWidget {
   final String role;
   final bool saving;
   final bool imageUploading;
-  final VoidCallback onUploadImage;
+  final ProfileImagePickCallback onPickImage;
   final VoidCallback onSave;
 
   @override
@@ -60,7 +60,7 @@ class MyProfileTab extends StatelessWidget {
                   imageUrlController: imageUrlController,
                   uploading: imageUploading,
                   disabled: saving || imageUploading,
-                  onUploadImage: onUploadImage,
+                  onPickImage: onPickImage,
                 ),
                 const SizedBox(height: 20),
                 _SettingsField(

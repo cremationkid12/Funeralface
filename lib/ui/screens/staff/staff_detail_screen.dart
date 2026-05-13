@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
@@ -7,7 +8,9 @@ import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/staff_services.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
+import 'package:everroute/ui/widgets/profile_image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StaffDetailScreen extends StatefulWidget {
   const StaffDetailScreen({
@@ -24,6 +27,8 @@ class StaffDetailScreen extends StatefulWidget {
 }
 
 class _StaffDetailScreenState extends State<StaffDetailScreen> {
+  final _imagePicker = ImagePicker();
+  late final TextEditingController _profileImageUrl;
   late final TextEditingController _name;
   late final TextEditingController _phone;
   late final TextEditingController _email;
@@ -31,10 +36,14 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   String _role = 'user';
   late bool _active;
   bool _busy = false;
+  bool _imageUploading = false;
 
   @override
   void initState() {
     super.initState();
+    _profileImageUrl = TextEditingController(
+      text: widget.initial['profile_image_url']?.toString() ?? '',
+    );
     _name = TextEditingController(
       text: widget.initial['name']?.toString() ?? '',
     );
@@ -53,11 +62,52 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
 
   @override
   void dispose() {
+    _profileImageUrl.dispose();
     _name.dispose();
     _phone.dispose();
     _email.dispose();
     _bio.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadProfileImage(ImageSource source) async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+      if (!mounted) return;
+      setState(() => _imageUploading = true);
+      final bytes = await picked.readAsBytes();
+      final imageUrl = await context
+          .read<AppRepositories>()
+          .staff
+          .uploadStaffPhoto(
+            bearerToken: token,
+            bytes: bytes,
+            fileName: picked.name,
+            referenceId: widget.staffId,
+          );
+      await context.read<StaffCubit>().updateStaff(
+        id: widget.staffId,
+        payload: <String, dynamic>{'profile_image_url': imageUrl},
+        bearerToken: token,
+      );
+      _profileImageUrl.text = imageUrl;
+      if (!mounted) return;
+      EverrouteSnackBar.success(context, 'Photo updated');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _imageUploading = false);
+    }
   }
 
   Future<void> _save() async {
@@ -72,6 +122,9 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
         'active': _active,
         'email': _email.text.trim().isEmpty ? null : _email.text.trim(),
         'bio': _bio.text.trim().isEmpty ? null : _bio.text.trim(),
+        'profile_image_url': _profileImageUrl.text.trim().isEmpty
+            ? null
+            : _profileImageUrl.text.trim(),
       };
       final updated = await context.read<StaffCubit>().updateStaff(
         id: widget.staffId,
@@ -188,14 +241,6 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final token = staffBearerToken();
-    final name = _name.text.isNotEmpty ? _name.text : '?';
-    final initials = name
-        .trim()
-        .split(' ')
-        .map((w) => w.isNotEmpty ? w[0] : '')
-        .take(2)
-        .join()
-        .toUpperCase();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -278,52 +323,12 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                 children: [
-                  // ── Avatar ──────────────────────────────────────────────
-                  Center(
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.25),
-                              width: 2,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              initials,
-                              style: GoogleFonts.poppins(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              color: Colors.white,
-                              size: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  // ── Profile photo (same pattern as list card / My Profile) ─
+                  ProfileImagePicker(
+                    imageUrlController: _profileImageUrl,
+                    uploading: _imageUploading,
+                    disabled: token == null || _busy || _imageUploading,
+                    onPickImage: _pickAndUploadProfileImage,
                   ),
                   const SizedBox(height: 24),
 

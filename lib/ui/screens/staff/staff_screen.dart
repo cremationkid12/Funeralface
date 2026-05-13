@@ -285,12 +285,12 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
     super.dispose();
   }
 
-  Future<void> _pickAndUploadProfileImage() async {
+  Future<void> _pickAndUploadProfileImage(ImageSource source) async {
     final token = staffBearerToken();
     if (token == null) return;
     try {
       final picked = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 90,
       );
       if (picked == null) return;
@@ -382,7 +382,7 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
                 imageUrlController: _profileImageUrl,
                 uploading: _imageUploading,
                 disabled: _submitting || _imageUploading,
-                onUploadImage: _pickAndUploadProfileImage,
+                onPickImage: _pickAndUploadProfileImage,
               ),
               const SizedBox(height: 20),
               _SheetField(
