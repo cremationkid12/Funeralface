@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/assignments/assignments_cubit.dart';
 import 'package:everroute/features/dashboard/dashboard_cubit.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
-import 'package:everroute/core/env.dart';
-import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/services/assignments_services.dart';
-import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 
@@ -43,10 +39,6 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   List<_AssignableStaffOption> _staffOptions = const [];
   var _loadingStaff = false;
 
-  String? _shareToken;
-  String? _shareExpiresIso;
-  var _shareOneTime = false;
-
   @override
   void initState() {
     super.initState();
@@ -74,15 +66,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         (rawAssignedStaffId != null && rawAssignedStaffId.isNotEmpty)
         ? rawAssignedStaffId
         : null;
-    _readShareFromMap(widget.initial);
     _loadAssignableStaff();
-  }
-
-  void _readShareFromMap(Map<String, dynamic> map) {
-    final t = map['share_token']?.toString().trim();
-    _shareToken = (t != null && t.isNotEmpty) ? t : null;
-    _shareExpiresIso = map['share_token_expires_at']?.toString();
-    _shareOneTime = map['share_token_one_time'] == true;
   }
 
   @override
@@ -99,7 +83,6 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   void _applyAssignmentResponse(Map<String, dynamic> body) {
     if (!mounted) return;
     setState(() {
-      _readShareFromMap(body);
       final status = body['status']?.toString().trim();
       if (status != null && status.isNotEmpty) {
         _status = status;
@@ -201,87 +184,9 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
     setState(() => _status = next);
   }
 
-  Future<void> _copyFamilyLink() async {
-    final t = _shareToken?.trim();
-    if (t == null || t.isEmpty) return;
-    await Clipboard.setData(
-      ClipboardData(text: AppEnv.familyShareUrlForToken(t)),
-    );
-    if (!mounted) return;
-    EverrouteSnackBar.success(context, 'Link copied');
-  }
-
-  Future<String?> _issueShareToken() async {
-    final token = staffBearerToken();
-    if (token == null) return null;
-    final newToken = generateFamilyShareToken();
-    setState(() => _saving = true);
-    try {
-      final body = await _assignmentsCubit.updateAssignment(
-        assignmentId: widget.assignmentId,
-        bearerToken: token,
-        payload: {'share_token': newToken},
-      );
-      if (!mounted) return null;
-      _applyAssignmentResponse(body);
-      final resolvedToken =
-          _shareToken ?? body['share_token']?.toString().trim() ?? newToken;
-      if (_shareToken == null || _shareToken!.isEmpty) {
-        setState(() => _shareToken = resolvedToken);
-      }
-      _didUpdate = true;
-      return resolvedToken;
-    } on ApiException catch (e) {
-      if (!mounted) return null;
-      EverrouteSnackBar.error(context, e.message);
-    } catch (e) {
-      if (!mounted) return null;
-      EverrouteSnackBar.error(context, e.toString());
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-    return null;
-  }
-
-  Future<void> _createAndShareFamilyLink() async {
-    final token = await _issueShareToken();
-    if (!mounted || token == null || token.isEmpty) return;
-    await _openShareFamilyLinkSheet();
-  }
-
-  Future<void> _openShareFamilyLinkSheet() async {
-    final token = staffBearerToken();
-    final shareToken = _shareToken?.trim();
-    if (token == null || shareToken == null || shareToken.isEmpty) return;
-    final sent = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ShareFamilyLinkSheet(
-        familyLink: AppEnv.familyShareUrlForToken(shareToken),
-        onShare: (email) async {
-          await context
-              .read<AppRepositories>()
-              .assignments
-              .shareFamilyLinkByEmail(
-                assignmentId: widget.assignmentId,
-                email: email,
-                bearerToken: token,
-              );
-        },
-      ),
-    );
-    if (sent == true && mounted) {
-      EverrouteSnackBar.success(context, 'Family link sent by email.');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final token = staffBearerToken();
-    final shareUrl = (_shareToken != null && _shareToken!.isNotEmpty)
-        ? AppEnv.familyShareUrlForToken(_shareToken!)
-        : null;
 
     return PopScope<bool>(
       canPop: false,
@@ -438,59 +343,6 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                       ),
                       maxLines: 3,
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Family status link',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Share a link so families can see assignment status without signing in. '
-                      'Only send links through your usual secure channels.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 12),
-                    if (shareUrl != null) ...[
-                      SelectableText(
-                        shareUrl,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 10),
-                      AppAccentButton(
-                        label: 'Copy Link',
-                        icon: Icons.copy,
-                        onPressed: _saving ? null : _copyFamilyLink,
-                      ),
-                      const SizedBox(height: 10),
-                      AppPrimaryButton(
-                        label: 'Share Link',
-                        icon: Icons.send,
-                        onPressed: _saving ? null : _openShareFamilyLinkSheet,
-                      ),
-                      if (_shareExpiresIso != null &&
-                          _shareExpiresIso!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            'Expires: $_shareExpiresIso',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      if (_shareOneTime)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            'One-time: the first successful open consumes this link.',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                    ] else ...[
-                      FilledButton.icon(
-                        onPressed: _saving ? null : _createAndShareFamilyLink,
-                        icon: const Icon(Icons.link),
-                        label: const Text('Create & share link'),
-                      ),
-                    ],
                   ],
                 ),
         ),
@@ -504,126 +356,4 @@ class _AssignableStaffOption {
 
   final String id;
   final String label;
-}
-
-class _ShareFamilyLinkSheet extends StatefulWidget {
-  const _ShareFamilyLinkSheet({
-    required this.familyLink,
-    required this.onShare,
-  });
-
-  final String familyLink;
-  final Future<void> Function(String email) onShare;
-
-  @override
-  State<_ShareFamilyLinkSheet> createState() => _ShareFamilyLinkSheetState();
-}
-
-class _ShareFamilyLinkSheetState extends State<_ShareFamilyLinkSheet> {
-  final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
-  bool _submitting = false;
-
-  @override
-  void dispose() {
-    _email.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _submitting = true);
-    try {
-      await widget.onShare(_email.text.trim());
-      if (!mounted) return;
-      Navigator.of(context).pop(true);
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      EverrouteSnackBar.error(context, e.message);
-    } catch (e) {
-      if (!mounted) return;
-      EverrouteSnackBar.error(context, e.toString());
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-          width: 2,
-        ),
-      ),
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, 24, 20, 20 + bottom),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Share Family Link',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Send the family status page link by email.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              SelectableText(
-                widget.familyLink,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  final v = value?.trim() ?? "";
-                  if (v.isEmpty) return 'Required';
-                  if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v)) {
-                    return 'Enter a valid email';
-                  }
-                  return null;
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Family email',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send Link'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: _submitting
-                    ? null
-                    : () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

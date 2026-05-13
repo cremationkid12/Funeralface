@@ -13,6 +13,7 @@ class AssignmentCard extends StatelessWidget {
     this.onToggle,
     required this.onStatusChange,
     this.onTap,
+    this.familyLinkSection,
   });
 
   final Map<String, dynamic> data;
@@ -21,6 +22,9 @@ class AssignmentCard extends StatelessWidget {
   final VoidCallback? onToggle;
   final ValueChanged<String> onStatusChange;
   final VoidCallback? onTap;
+
+  /// When [isExpanded], shown below the contact row and above status chips.
+  final Widget? familyLinkSection;
 
   @override
   Widget build(BuildContext context) {
@@ -182,6 +186,13 @@ class AssignmentCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (familyLinkSection != null) ...[
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+                  child: familyLinkSection!,
+                ),
+              ],
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 child: Wrap(

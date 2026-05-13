@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:everroute/features/assignments/assignments_cubit.dart';
 import 'package:everroute/features/assignments/assignments_state.dart';
@@ -8,7 +9,11 @@ import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/core/env.dart';
+import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
+import 'package:everroute/ui/screens/assignments/widgets/assignment_family_link_section.dart';
+import 'package:everroute/ui/screens/assignments/widgets/share_family_link_sheet.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
@@ -80,6 +85,101 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       if (!mounted) return;
       EverrouteSnackBar.error(context, e.toString());
     }
+  }
+
+  Map<String, dynamic>? _assignmentMap(String assignmentId) {
+    for (final it in _assignmentsCubit.state.filteredItems) {
+      final m = it as Map<String, dynamic>;
+      if (m['id']?.toString() == assignmentId) return m;
+    }
+    return null;
+  }
+
+  Future<void> _copyFamilyLink(String assignmentId) async {
+    final m = _assignmentMap(assignmentId);
+    final t = m?['share_token']?.toString().trim();
+    if (t == null || t.isEmpty) return;
+    await Clipboard.setData(
+      ClipboardData(text: AppEnv.familyShareUrlForToken(t)),
+    );
+    if (!mounted) return;
+    EverrouteSnackBar.success(context, 'Link copied');
+  }
+
+  Future<String?> _issueShareToken(String assignmentId) async {
+    final token = staffBearerToken();
+    if (token == null) return null;
+    final newToken = generateFamilyShareToken();
+    try {
+      final body = await _assignmentsCubit.updateAssignment(
+        assignmentId: assignmentId,
+        bearerToken: token,
+        payload: {'share_token': newToken},
+      );
+      return body['share_token']?.toString().trim() ?? newToken;
+    } on ApiException catch (e) {
+      if (!mounted) return null;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return null;
+      EverrouteSnackBar.error(context, e.toString());
+    }
+    return null;
+  }
+
+  Future<void> _openShareFamilyLinkSheet(
+    String assignmentId,
+    String shareToken,
+  ) async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    final sent = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ShareFamilyLinkSheet(
+        familyLink: AppEnv.familyShareUrlForToken(shareToken),
+        onShare: (email) async {
+          await context.read<AppRepositories>().assignments.shareFamilyLinkByEmail(
+            assignmentId: assignmentId,
+            email: email,
+            bearerToken: token,
+          );
+        },
+      ),
+    );
+    if (sent == true && mounted) {
+      EverrouteSnackBar.success(context, 'Family link sent by email.');
+    }
+  }
+
+  Future<void> _openShareFamilyLinkFromCard(String assignmentId) async {
+    final m = _assignmentMap(assignmentId);
+    final t = m?['share_token']?.toString().trim();
+    if (t == null || t.isEmpty) return;
+    await _openShareFamilyLinkSheet(assignmentId, t);
+  }
+
+  Future<void> _createAndShareFamilyLink(String assignmentId) async {
+    final t = await _issueShareToken(assignmentId);
+    if (!mounted || t == null || t.isEmpty) return;
+    await _openShareFamilyLinkSheet(assignmentId, t);
+  }
+
+  Widget? _familyLinkSection(
+    BuildContext context,
+    AssignmentsState state,
+    Map<String, dynamic> m,
+    String id,
+  ) {
+    if (staffBearerToken() == null) return null;
+    return AssignmentFamilyLinkSection(
+      data: m,
+      busy: state.submitting,
+      onCopy: () => _copyFamilyLink(id),
+      onShare: () => _openShareFamilyLinkFromCard(id),
+      onCreate: () => _createAndShareFamilyLink(id),
+    );
   }
 
   Future<void> _openCreateSheet() async {
@@ -268,6 +368,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                             onToggleExpanded: _assignmentsCubit.toggleExpanded,
                             onChangeStatus: _changeStatus,
                             onAssignmentUpdated: _refresh,
+                            familyLinkSectionBuilder: _familyLinkSection,
                           ),
                         ),
                 ),
@@ -289,6 +390,7 @@ class _AssignmentsList extends StatelessWidget {
     required this.onToggleExpanded,
     required this.onChangeStatus,
     required this.onAssignmentUpdated,
+    required this.familyLinkSectionBuilder,
   });
 
   final AssignmentsState state;
@@ -300,6 +402,15 @@ class _AssignmentsList extends StatelessWidget {
   })
   onChangeStatus;
   final Future<void> Function() onAssignmentUpdated;
+
+  /// Built when a row is expanded; may return null to hide the block.
+  final Widget? Function(
+    BuildContext context,
+    AssignmentsState state,
+    Map<String, dynamic> m,
+    String id,
+  )
+  familyLinkSectionBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +452,9 @@ class _AssignmentsList extends StatelessWidget {
                     }
                   },
             onStatusChange: (s) => onChangeStatus(assignmentId: id, status: s),
+            familyLinkSection: isExpanded
+                ? familyLinkSectionBuilder(context, state, m, id)
+                : null,
           ),
         );
       },
