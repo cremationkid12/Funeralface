@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/features/staff/staff_state.dart';
 import 'package:everroute/features/session/staff_auth.dart';
@@ -8,9 +9,11 @@ import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/ui/screens/staff/widgets/staff_card.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
+import 'package:everroute/ui/widgets/profile_image_picker.dart';
 import 'package:everroute/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
@@ -51,7 +54,7 @@ class _StaffScreenState extends State<StaffScreen> {
   Future<void> _refresh() => _load();
 
   Future<void> _openAddSheet() async {
-    await showModalBottomSheet<Map<String, dynamic>?>(
+    await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -66,7 +69,6 @@ class _StaffScreenState extends State<StaffScreen> {
         },
       ),
     );
-    if (!mounted) return;
   }
 
   Future<void> _openInviteSheet() async {
@@ -263,20 +265,58 @@ class _AddStaffSheet extends StatefulWidget {
 
 class _AddStaffSheetState extends State<_AddStaffSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _imagePicker = ImagePicker();
+  final _profileImageUrl = TextEditingController();
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _bio = TextEditingController();
   String _role = 'user';
   bool _submitting = false;
+  bool _imageUploading = false;
 
   @override
   void dispose() {
+    _profileImageUrl.dispose();
     _name.dispose();
     _phone.dispose();
     _email.dispose();
     _bio.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadProfileImage() async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+      if (!mounted) return;
+      setState(() => _imageUploading = true);
+      final bytes = await picked.readAsBytes();
+      final imageUrl = await context
+          .read<AppRepositories>()
+          .staff
+          .uploadStaffPhoto(
+            bearerToken: token,
+            bytes: bytes,
+            fileName: picked.name,
+          );
+      _profileImageUrl.text = imageUrl;
+      if (!mounted) return;
+      EverrouteSnackBar.success(context, 'Photo uploaded');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _imageUploading = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -294,6 +334,8 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
       if (e.isNotEmpty) payload['email'] = e;
       final b = _bio.text.trim();
       if (b.isNotEmpty) payload['bio'] = b;
+      final img = _profileImageUrl.text.trim();
+      if (img.isNotEmpty) payload['profile_image_url'] = img;
       await widget.onCreate(payload);
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -313,7 +355,7 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      margin: const EdgeInsets.fromLTRB(12, 64, 12, 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
@@ -334,6 +376,13 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
                 'Add Staff Member',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 20),
+              ProfileImagePicker(
+                imageUrlController: _profileImageUrl,
+                uploading: _imageUploading,
+                disabled: _submitting || _imageUploading,
+                onUploadImage: _pickAndUploadProfileImage,
               ),
               const SizedBox(height: 20),
               _SheetField(

@@ -40,6 +40,22 @@ class StaffServices {
     required Uint8List bytes,
     required String fileName,
     required String staffId,
+  }) {
+    return uploadStaffPhoto(
+      bearerToken: bearerToken,
+      bytes: bytes,
+      fileName: fileName,
+      referenceId: staffId,
+    );
+  }
+
+  /// Uploads a staff photo to storage. [referenceId] is optional (folder segment);
+  /// omit for new staff before a row exists.
+  Future<String> uploadStaffPhoto({
+    required String bearerToken,
+    required Uint8List bytes,
+    required String fileName,
+    String? referenceId,
   }) async {
     final normalizedBase = _apiClient.baseUrl.trim().replaceAll(
       RegExp(r'/+$'),
@@ -53,7 +69,10 @@ class StaffServices {
     final request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
     request.headers['Authorization'] = 'Bearer $bearerToken';
     request.fields['purpose'] = 'staff_photo';
-    request.fields['reference_id'] = staffId;
+    final ref = referenceId?.trim();
+    if (ref != null && ref.isNotEmpty) {
+      request.fields['reference_id'] = ref;
+    }
     request.files.add(
       http.MultipartFile.fromBytes('file', bytes, filename: fileName),
     );
