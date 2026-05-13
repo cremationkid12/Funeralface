@@ -93,7 +93,7 @@ class MyProfileTab extends StatelessWidget {
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: bioController,
-                  maxLines: 3,
+                  maxLines: 2,
                   style: GoogleFonts.poppins(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Write a short bio ...',
@@ -129,11 +129,7 @@ class MyProfileTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          AppPrimaryButton(
-            label: 'Save',
-            busy: saving,
-            onPressed: onSave,
-          ),
+          AppPrimaryButton(label: 'Save', busy: saving, onPressed: onSave),
         ],
       ),
     );

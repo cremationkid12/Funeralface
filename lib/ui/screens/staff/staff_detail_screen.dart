@@ -358,7 +358,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                       TextField(
                         controller: _bio,
                         enabled: !_busy,
-                        maxLines: 3,
+                        maxLines: 2,
                         textInputAction: TextInputAction.newline,
                         style: GoogleFonts.poppins(fontSize: 14),
                         decoration: InputDecoration(

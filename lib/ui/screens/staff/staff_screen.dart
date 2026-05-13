@@ -266,6 +266,7 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
+  final _bio = TextEditingController();
   String _role = 'user';
   bool _submitting = false;
 
@@ -274,6 +275,7 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _bio.dispose();
     super.dispose();
   }
 
@@ -290,6 +292,8 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
       };
       final e = _email.text.trim();
       if (e.isNotEmpty) payload['email'] = e;
+      final b = _bio.text.trim();
+      if (b.isNotEmpty) payload['bio'] = b;
       await widget.onCreate(payload);
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -355,6 +359,31 @@ class _AddStaffSheetState extends State<_AddStaffSheet> {
                 hint: 'eg. john@email.com',
                 icon: Icons.mail_outline_rounded,
                 keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Bio',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _bio,
+                enabled: !_submitting,
+                maxLines: 2,
+                textInputAction: TextInputAction.newline,
+                style: GoogleFonts.poppins(fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Write a short bio ...',
+                  hintStyle: GoogleFonts.poppins(
+                    color: AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                  contentPadding: const EdgeInsets.all(14),
+                ),
               ),
               const SizedBox(height: 14),
               // Role dropdown
