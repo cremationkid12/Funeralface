@@ -2,27 +2,30 @@
 
 Funeralface mobile app (Flutter).
 
-## Environment (compile-time)
+## Environment
 
-Flutter reads config via `--dart-define` (see `lib/core/env.dart`). Example:
+Runtime values come from **`flutter_dotenv`**: on startup the app loads project-root **`.env`** (bundled as a Flutter asset) and then **`assets/env.default`** for any keys you omit. Copy `.env.example` to `.env` next to `pubspec.yaml` before your first `flutter run` / `flutter build` — the `.env` path is listed under `flutter: assets:` and the file must exist so the asset bundle step succeeds.
 
-```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000 --dart-define=APP_ENV=development
-```
+Non-empty **`--dart-define=...`** entries still override the same keys (useful in CI without checking in secrets).
 
-For a physical device, use your machine LAN IP instead of `localhost`.
+On **Android**, the app now uses a single default variant (no product flavors), so you can run with plain `flutter run` / `flutter build apk`.
 
-Copy `.env.example` to `.env` for local reference only; Dart does not load `.env` files unless you add a code generator.
+For a physical device, use your machine LAN IP instead of `localhost` in `.env` where applicable.
 
-## Getting Started
+## App structure
 
-This project is a starting point for a Flutter application.
+- **Routing:** `go_router` with a `StatefulShellRoute` tab shell (`lib/app/router/app_router.dart`, `lib/shell/main_shell.dart`).
+- **DI:** `provider` + `AppRepositories` (`lib/app/app_repositories.dart`).
+- **Staff tabs:** Dashboard, Assignments, Staff, Settings under `lib/features/`.
 
-A few resources to get you started if this is your first Flutter project:
+## Family deep links (P5 / P6.5)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- In-app path: **`/family/<token>`** (see `FamilyAssignmentScreen` and `extractFamilyAssignmentToken` in `lib/core/deeplink/deeplink_parser.dart`).
+- Parser is strict by default: exact host match (when configured), only `/family/<token>`, and token-format validation; legacy `?token=` fallback is opt-in (`allowQueryFallback: true`).
+- **Android:** `AndroidManifest.xml` includes a `VIEW` intent-filter with `https`, host **`links.everroute.app`**, and `pathPrefix` **`/family/`**. Replace that host with your verified domain and complete [Digital Asset Links](https://developer.android.com/training/app-links) before production.
+- **iOS:** `Runner.entitlements` now includes Associated Domains scaffold for `applinks:links.everroute.app`. Replace host and publish `apple-app-site-association` before production.
+- Runtime link ingestion is wired through `app_links` in `main.dart` and routes matching links to `/family/<token>` only.
+- **Staff copy URL:** `FAMILY_LINK_BASE` (default `https://links.everroute.app`) is used on the assignment detail screen when generating/copying a family link so the clipboard matches your verified host. Override with `--dart-define=FAMILY_LINK_BASE=https://your-staging-host.example` when testing.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Manual check: run the app with `flutter run`, then open
+`http://localhost:<port>/family/<token>` is not available from the browser; use `adb shell am start -a android.intent.action.VIEW -d "https://links.everroute.app/family/<token>"` after updating the host to match your manifest.

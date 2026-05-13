@@ -33,6 +33,7 @@ migrate_working_dir/
 /build/
 /coverage/
 .env
+.env.dev
 .env.local
 .env.development
 .env.test
@@ -48,3 +49,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android release signing (never commit)
+/android/key.properties
+**/upload-keystore.jks

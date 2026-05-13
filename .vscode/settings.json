@@ -1,0 +1,5 @@
+{
+  "dart.previewFlutterUiGuides": true,
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false
+}
