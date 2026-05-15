@@ -98,4 +98,6 @@ class AppEnv {
 
   static bool get hasSupabaseAuthConfig =>
       supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;
+
+  static const int passwordResetOtpDigits = 8;
 }

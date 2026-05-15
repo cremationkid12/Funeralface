@@ -38,6 +38,22 @@ class DeeplinkCoordinator {
     final raw = uri.toString();
     if (_lastHandledUri == raw) return;
 
+    final recovery = extractPasswordRecoveryTokens(
+      uri,
+      expectedHost: _expectedHost,
+    );
+    if (recovery != null) {
+      _lastHandledUri = raw;
+      _router.go(
+        '/auth/reset-password',
+        extra: <String, String>{
+          'access_token': recovery.accessToken,
+          'refresh_token': recovery.refreshToken,
+        },
+      );
+      return;
+    }
+
     final token = extractFamilyAssignmentToken(
       uri,
       expectedHost: _expectedHost,

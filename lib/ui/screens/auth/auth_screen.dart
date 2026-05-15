@@ -7,6 +7,11 @@ import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/auth/auth_cubit.dart';
 import 'package:everroute/features/auth/auth_state.dart';
+import 'package:everroute/ui/screens/auth/widgets/auth_field_label.dart';
+import 'package:everroute/ui/screens/auth/widgets/auth_flow_scaffold.dart';
+import 'package:everroute/ui/screens/auth/widgets/auth_section_card.dart';
+import 'package:everroute/ui/screens/auth/widgets/auth_text_field.dart';
+import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -103,7 +108,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
   void _openForgotPassword() {
     final email = _loginEmail.text.trim();
-    final qp = email.isNotEmpty ? '?email=${Uri.encodeQueryComponent(email)}' : '';
+    final qp = email.isNotEmpty
+        ? '?email=${Uri.encodeQueryComponent(email)}'
+        : '';
     context.push('/auth/forgot-password$qp');
   }
 
@@ -144,137 +151,60 @@ class _AuthScreenState extends State<AuthScreen> {
           context.read<AuthCubit>().clearMessages();
         }
       },
-      builder: (context, authState) => Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Logo ──────────────────────────────────────────────────────
-                Center(
-                  child: SvgPicture.asset(
-                    'assets/landing logo.svg',
-                    height: 100,
-                  ),
+      builder: (context, authState) => AuthFlowScaffold(
+        showBackButton: false,
+        scrollHeader: Center(
+          child: SvgPicture.asset('assets/landing logo.svg', height: 100),
+        ),
+        title: _isLogin ? 'Hello, Welcome Back' : 'Signup',
+        subtitle: _isLogin
+            ? 'Login to your account below'
+            : 'Enter your details below to create your account.',
+        body: _isLogin
+            ? _LoginForm(
+                emailController: _loginEmail,
+                passwordController: _loginPassword,
+                passwordVisible: _loginPasswordVisible,
+                rememberMe: _loginRememberMe,
+                busy: authState.busy,
+                onTogglePassword: () => setState(
+                  () => _loginPasswordVisible = !_loginPasswordVisible,
                 ),
-                const SizedBox(height: 24),
-
-                // ── Heading card ──────────────────────────────────────────────
-                _SectionCard(
-                  child: _isLogin ? _LoginHeading() : _SignupHeading(),
+                onRememberMe: (v) =>
+                    setState(() => _loginRememberMe = v ?? false),
+                onForgotPassword: _openForgotPassword,
+                onSubmit: _doLogin,
+              )
+            : _SignupForm(
+                nameController: _signupName,
+                emailController: _signupEmail,
+                passwordController: _signupPassword,
+                passwordVisible: _signupPasswordVisible,
+                acceptTerms: _signupAcceptTerms,
+                busy: authState.busy,
+                onTogglePassword: () => setState(
+                  () => _signupPasswordVisible = !_signupPasswordVisible,
                 ),
-                const SizedBox(height: 16),
-
-                // ── Form card ─────────────────────────────────────────────────
-                _SectionCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_isLogin)
-                        _LoginForm(
-                          emailController: _loginEmail,
-                          passwordController: _loginPassword,
-                          passwordVisible: _loginPasswordVisible,
-                          rememberMe: _loginRememberMe,
-                          busy: authState.busy,
-                          onTogglePassword: () => setState(
-                            () =>
-                                _loginPasswordVisible = !_loginPasswordVisible,
-                          ),
-                          onRememberMe: (v) =>
-                              setState(() => _loginRememberMe = v ?? false),
-                          onForgotPassword: _openForgotPassword,
-                          onSubmit: _doLogin,
-                        )
-                      else
-                        _SignupForm(
-                          nameController: _signupName,
-                          emailController: _signupEmail,
-                          passwordController: _signupPassword,
-                          passwordVisible: _signupPasswordVisible,
-                          acceptTerms: _signupAcceptTerms,
-                          busy: authState.busy,
-                          onTogglePassword: () => setState(
-                            () => _signupPasswordVisible =
-                                !_signupPasswordVisible,
-                          ),
-                          onAcceptTerms: (v) =>
-                              setState(() => _signupAcceptTerms = v ?? false),
-                          onSubmit: _doSignup,
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // ── Social login card ─────────────────────────────────────────
-                _SectionCard(
-                  child: Column(
-                    children: [
-                      _OrDivider(
-                        label: _isLogin ? 'Or Login with' : 'Or Signup with',
-                      ),
-                      const SizedBox(height: 16),
-                      _SocialButton(
-                        label: 'Google',
-                        icon: _GoogleIcon(),
-                        onTap: authState.busy ? () {} : _onGoogleTap,
-                      ),
-                      const SizedBox(height: 16),
-                      _SwitchModeText(isLogin: _isLogin, onSwitch: _switchMode),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                onAcceptTerms: (v) =>
+                    setState(() => _signupAcceptTerms = v ?? false),
+                onSubmit: _doSignup,
+              ),
+        belowBody: AuthSectionCard(
+          child: Column(
+            children: [
+              _OrDivider(label: _isLogin ? 'Or Login with' : 'Or Signup with'),
+              const SizedBox(height: 16),
+              _SocialButton(
+                label: 'Google',
+                icon: _GoogleIcon(),
+                onTap: authState.busy ? () {} : _onGoogleTap,
+              ),
+              const SizedBox(height: 16),
+              _SwitchModeText(isLogin: _isLogin, onSwitch: _switchMode),
+            ],
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── Heading widgets ────────────────────────────────────────────────────────────
-
-class _LoginHeading extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Hello, Welcome Back',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Login to your account below',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-        ),
-      ],
-    );
-  }
-}
-
-class _SignupHeading extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Signup', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text(
-          'Enter your details below to create your account.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-        ),
-      ],
     );
   }
 }
@@ -309,9 +239,9 @@ class _LoginForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _FieldLabel('Email Address'),
+        const AuthFieldLabel('Email Address'),
         const SizedBox(height: 6),
-        _AppTextField(
+        AuthTextField(
           controller: emailController,
           hint: 'zainabali@example.com',
           prefixIcon: Icons.mail_outline_rounded,
@@ -319,9 +249,9 @@ class _LoginForm extends StatelessWidget {
           autofillHints: const [AutofillHints.email],
         ),
         const SizedBox(height: 14),
-        _FieldLabel('Password'),
+        const AuthFieldLabel('Password'),
         const SizedBox(height: 6),
-        _AppTextField(
+        AuthTextField(
           controller: passwordController,
           hint: '••••••••••',
           prefixIcon: Icons.lock_outline_rounded,
@@ -376,7 +306,7 @@ class _LoginForm extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        _PrimaryButton(label: 'Login', busy: busy, onPressed: onSubmit),
+        AppPrimaryButton(label: 'Login', busy: busy, onPressed: onSubmit),
       ],
     );
   }
@@ -412,9 +342,9 @@ class _SignupForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _FieldLabel('Name'),
+        const AuthFieldLabel('Name'),
         const SizedBox(height: 6),
-        _AppTextField(
+        AuthTextField(
           controller: nameController,
           hint: 'Zainab Ali',
           prefixIcon: Icons.person_outline_rounded,
@@ -422,9 +352,9 @@ class _SignupForm extends StatelessWidget {
           autofillHints: const [AutofillHints.name],
         ),
         const SizedBox(height: 14),
-        _FieldLabel('Email Address'),
+        const AuthFieldLabel('Email Address'),
         const SizedBox(height: 6),
-        _AppTextField(
+        AuthTextField(
           controller: emailController,
           hint: 'zainabali@example.com',
           prefixIcon: Icons.mail_outline_rounded,
@@ -432,9 +362,9 @@ class _SignupForm extends StatelessWidget {
           autofillHints: const [AutofillHints.email],
         ),
         const SizedBox(height: 14),
-        _FieldLabel('Password'),
+        const AuthFieldLabel('Password'),
         const SizedBox(height: 6),
-        _AppTextField(
+        AuthTextField(
           controller: passwordController,
           hint: '••••••••••',
           prefixIcon: Icons.lock_outline_rounded,
@@ -515,136 +445,13 @@ class _SignupForm extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
-        _PrimaryButton(label: 'Signup', busy: busy, onPressed: onSubmit),
+        AppPrimaryButton(label: 'Signup', busy: busy, onPressed: onSubmit),
       ],
     );
   }
 }
 
 // ── Reusable sub-widgets ───────────────────────────────────────────────────────
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: GoogleFonts.poppins(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: AppColors.textSecondary,
-      ),
-    );
-  }
-}
-
-class _AppTextField extends StatelessWidget {
-  const _AppTextField({
-    required this.controller,
-    required this.hint,
-    required this.prefixIcon,
-    this.obscureText = false,
-    this.keyboardType,
-    this.autofillHints,
-    this.suffixIcon,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final IconData prefixIcon;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final Iterable<String>? autofillHints;
-  final Widget? suffixIcon;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      autofillHints: autofillHints,
-      style: GoogleFonts.poppins(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        color: AppColors.textPrimary,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 12, right: 8),
-          child: Icon(prefixIcon, color: AppColors.accent, size: 20),
-        ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-        suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({
-    required this.label,
-    required this.busy,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool busy;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      child: FilledButton(
-        onPressed: busy ? null : onPressed,
-        child: busy
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(label),
-      ),
-    );
-  }
-}
 
 class _OrDivider extends StatelessWidget {
   const _OrDivider({required this.label});

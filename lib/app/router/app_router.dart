@@ -53,7 +53,19 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
           GoRoute(
             path: 'reset-password',
             name: 'auth_reset_password',
-            builder: (context, state) => const ResetPasswordScreen(),
+            builder: (context, state) {
+              String? accessToken;
+              String? refreshToken;
+              final extra = state.extra;
+              if (extra is Map) {
+                accessToken = extra['access_token'] as String?;
+                refreshToken = extra['refresh_token'] as String?;
+              }
+              return ResetPasswordScreen(
+                recoveryAccessToken: accessToken,
+                recoveryRefreshToken: refreshToken,
+              );
+            },
           ),
         ],
       ),
