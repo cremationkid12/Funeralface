@@ -71,6 +71,12 @@ class AppEnv {
     return '$base/family/$token';
   }
 
+  /// Public Terms of Use page (`{FAMILY_LINK_BASE}/terms-of-use`).
+  static String get termsOfUseUrl {
+    final base = familyLinkBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    return '$base/terms-of-use';
+  }
+
   static String get supabaseUrl => _afterDefine(
     'SUPABASE_URL',
     const String.fromEnvironment('SUPABASE_URL', defaultValue: ''),

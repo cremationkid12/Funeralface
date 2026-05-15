@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:everroute/core/env.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/auth/auth_cubit.dart';
@@ -9,6 +10,7 @@ import 'package:everroute/features/auth/auth_state.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -78,7 +80,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _doSignup() async {
     if (!_signupAcceptTerms) {
-      _authCubit.setError('Please accept the Terms & Conditions.');
+      _authCubit.setError('Please accept the Terms of Use.');
       return;
     }
     final name = _signupName.text.trim();
@@ -483,18 +485,34 @@ class _SignupForm extends StatelessWidget {
                   children: [
                     const TextSpan(text: 'I Accept the '),
                     TextSpan(
-                      text: 'Terms & Conditions',
+                      text: 'Terms of Use',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.accent,
                       ),
                       recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          EverrouteSnackBar.info(
-                            context,
-                            'Terms & Conditions coming soon.',
-                          );
+                        ..onTap = () async {
+                          final uri = Uri.parse(AppEnv.termsOfUseUrl);
+                          try {
+                            final opened = await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                            if (!opened && context.mounted) {
+                              EverrouteSnackBar.info(
+                                context,
+                                'Could not open Terms of Use.',
+                              );
+                            }
+                          } catch (_) {
+                            if (context.mounted) {
+                              EverrouteSnackBar.info(
+                                context,
+                                'Could not open Terms of Use.',
+                              );
+                            }
+                          }
                         },
                     ),
                   ],
