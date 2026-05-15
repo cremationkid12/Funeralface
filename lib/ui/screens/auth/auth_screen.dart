@@ -101,17 +101,10 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  Future<void> _openForgotPassword() async {
-    final emailController = TextEditingController(
-      text: _loginEmail.text.trim(),
-    );
-    final email = await showDialog<String>(
-      context: context,
-      builder: (ctx) => _ForgotPasswordDialog(controller: emailController),
-    );
-    emailController.dispose();
-    if (!mounted || email == null || email.isEmpty) return;
-    await _authCubit.recoverPassword(email: email);
+  void _openForgotPassword() {
+    final email = _loginEmail.text.trim();
+    final qp = email.isNotEmpty ? '?email=${Uri.encodeQueryComponent(email)}' : '';
+    context.push('/auth/forgot-password$qp');
   }
 
   Future<void> _onGoogleTap() async {
@@ -523,56 +516,6 @@ class _SignupForm extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         _PrimaryButton(label: 'Signup', busy: busy, onPressed: onSubmit),
-      ],
-    );
-  }
-}
-
-// ── Forgot password dialog ─────────────────────────────────────────────────────
-
-class _ForgotPasswordDialog extends StatelessWidget {
-  const _ForgotPasswordDialog({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(
-        'Reset Password',
-        style: Theme.of(context).textTheme.titleLarge,
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Enter your email address and we\'ll send you a reset link.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 16),
-          _AppTextField(
-            controller: controller,
-            hint: 'Email address',
-            prefixIcon: Icons.mail_outline_rounded,
-            keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-          child: const Text('Send Reset Link'),
-        ),
       ],
     );
   }

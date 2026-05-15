@@ -1,6 +1,9 @@
 import 'package:everroute/ui/screens/assignments/assignments_screen.dart';
 import 'package:everroute/ui/screens/assignments/assignment_detail_screen.dart';
 import 'package:everroute/ui/screens/auth/auth_screen.dart';
+import 'package:everroute/ui/screens/auth/forgot_password_screen.dart';
+import 'package:everroute/ui/screens/auth/reset_password_screen.dart';
+import 'package:everroute/ui/screens/auth/verification_code_screen.dart';
 import 'package:everroute/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:everroute/features/session/auth_session.dart';
 import 'package:everroute/ui/screens/settings/settings_screen.dart';
@@ -19,7 +22,7 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
       final path = state.uri.path;
       final authed = AuthSession.instance.isAuthenticated;
       final isFamily = path.startsWith('/family/');
-      final isAuth = path == '/auth';
+      final isAuth = path == '/auth' || path.startsWith('/auth/');
       final isSplash = path == '/splash';
       if (isFamily || isSplash) return null;
       if (!authed && !isAuth) return '/auth';
@@ -36,6 +39,23 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
         path: '/auth',
         name: 'auth',
         builder: (context, state) => const AuthScreen(),
+        routes: [
+          GoRoute(
+            path: 'forgot-password',
+            name: 'auth_forgot_password',
+            builder: (context, state) => const ForgotPasswordScreen(),
+          ),
+          GoRoute(
+            path: 'verify-code',
+            name: 'auth_verify_code',
+            builder: (context, state) => const VerificationCodeScreen(),
+          ),
+          GoRoute(
+            path: 'reset-password',
+            name: 'auth_reset_password',
+            builder: (context, state) => const ResetPasswordScreen(),
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
