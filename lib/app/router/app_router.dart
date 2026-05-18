@@ -13,7 +13,7 @@ import 'package:everroute/ui/screens/staff/staff_screen.dart';
 import 'package:everroute/ui/screens/main_shell.dart';
 import 'package:go_router/go_router.dart';
 
-/// Staff shell routes + family deep-link route (`/family/:token`).
+/// Staff shell routes (dashboard, assignments, staff, settings, auth).
 GoRouter createAppRouter({String initialLocation = '/splash'}) {
   return GoRouter(
     initialLocation: initialLocation,
@@ -21,10 +21,9 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
     redirect: (context, state) {
       final path = state.uri.path;
       final authed = AuthSession.instance.isAuthenticated;
-      final isFamily = path.startsWith('/family/');
       final isAuth = path == '/auth' || path.startsWith('/auth/');
       final isSplash = path == '/splash';
-      if (isFamily || isSplash) return null;
+      if (isSplash) return null;
       if (!authed && !isAuth) return '/auth';
       if (authed && isAuth) return '/dashboard';
       return null;

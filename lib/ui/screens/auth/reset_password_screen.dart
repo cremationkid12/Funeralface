@@ -18,7 +18,7 @@ class ResetPasswordScreen extends StatefulWidget {
     this.recoveryRefreshToken,
   });
 
-  /// From Supabase recovery deep link ([GoRouterState.extra]).
+  /// From in-app navigation after OTP verification ([GoRouterState.extra]).
   final String? recoveryAccessToken;
   final String? recoveryRefreshToken;
 
