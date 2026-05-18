@@ -519,7 +519,6 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
     setState(() => _submitting = true);
     try {
       final notes = _notes.text.trim();
-      final etaDateTime = etaDateTimeForPayload(_etaTime);
       final payload = <String, dynamic>{
         'decedent_name': _decedentName.text.trim(),
         'pickup_address': _pickupAddress.text.trim(),
@@ -527,8 +526,9 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
         'contact_phone': _contactPhone.text.trim(),
         'status': _assignedStaffId == null ? 'pending' : 'assigned',
       };
-      if (etaDateTime != null) {
-        payload['eta_time'] = etaDateTime.toIso8601String();
+      final etaValue = etaTimeToApiValue(_etaTime);
+      if (etaValue != null) {
+        payload['eta_time'] = etaValue;
       }
       if (_assignedStaffId != null) {
         payload['assigned_staff_id'] = _assignedStaffId;

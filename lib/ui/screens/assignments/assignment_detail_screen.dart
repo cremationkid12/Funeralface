@@ -165,7 +165,6 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           : (_assignedStaffId != null && _status == 'pending'
                 ? 'assigned'
                 : _status);
-      final etaPayload = etaDateTimeForPayload(_etaTime);
       final body = await _assignmentsCubit.updateAssignment(
         assignmentId: widget.assignmentId,
         bearerToken: token,
@@ -177,7 +176,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           'notes': _notes.text.trim(),
           'status': statusToSave,
           'assigned_staff_id': _assignedStaffId,
-          'eta_time': etaPayload?.toIso8601String(),
+          'eta_time': etaTimeToApiValue(_etaTime),
         },
       );
       if (!mounted) return null;
