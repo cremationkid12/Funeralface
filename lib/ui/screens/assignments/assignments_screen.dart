@@ -12,6 +12,7 @@ import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
+import 'package:everroute/core/assignment_eta.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_eta_to_arrival_field.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_family_link_section.dart';
 import 'package:everroute/ui/screens/assignments/widgets/share_family_link_sheet.dart';

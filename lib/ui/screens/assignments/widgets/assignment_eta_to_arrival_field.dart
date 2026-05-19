@@ -2,40 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Parses API `eta_time` (UTC ISO) into local [TimeOfDay] for the picker.
-TimeOfDay? etaTimeFromAssignmentValue(dynamic value) {
-  if (value == null) return null;
-  final raw = value.toString().trim();
-  if (raw.isEmpty) return null;
-
-  final parsed = DateTime.tryParse(raw);
-  if (parsed == null) return null;
-  final local = parsed.toLocal();
-  return TimeOfDay(hour: local.hour, minute: local.minute);
-}
-
-/// Local today at [time] (device timezone).
-DateTime? etaLocalDateTimeFromTimeOfDay(TimeOfDay? time) {
-  if (time == null) return null;
-  final now = DateTime.now();
-  return DateTime(now.year, now.month, now.day, time.hour, time.minute);
-}
-
-/// ISO-8601 with timezone offset for API (instant stored as TIMESTAMPTZ).
-String? etaTimeToApiValue(TimeOfDay? time) {
-  final local = etaLocalDateTimeFromTimeOfDay(time);
-  if (local == null) return null;
-  return local.toIso8601String();
-}
-
-/// Formatted ETA label for list cards, or null when unset.
-String? formatAssignmentEtaLabel(BuildContext context, dynamic etaTime) {
-  final time = etaTimeFromAssignmentValue(etaTime);
-  if (time == null) return null;
-  return time.format(context);
-}
-
-/// Optional time picker for "ETA to Arrival" on create/edit assignment flows.
+/// Time picker UI for "ETA to Arrival" on create/edit assignment flows.
 class AssignmentEtaToArrivalField extends StatelessWidget {
   const AssignmentEtaToArrivalField({
     super.key,
@@ -50,8 +17,6 @@ class AssignmentEtaToArrivalField extends StatelessWidget {
   final bool enabled;
   final VoidCallback onPick;
   final VoidCallback onClear;
-
-  /// Matches [TextField] with [OutlineInputBorder] on assignment detail.
   final bool useOutlinedBorder;
 
   @override

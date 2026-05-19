@@ -7,6 +7,7 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/services/assignments_services.dart';
+import 'package:everroute/core/assignment_eta.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_eta_to_arrival_field.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
