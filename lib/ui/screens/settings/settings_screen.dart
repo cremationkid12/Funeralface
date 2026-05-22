@@ -12,10 +12,14 @@ import 'package:everroute/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:everroute/models/billing_subscription_model.dart';
+import 'package:everroute/services/billing_services.dart';
 import 'package:everroute/ui/screens/settings/widgets/funeral_home_tab.dart';
 import 'package:everroute/ui/screens/settings/widgets/my_profile_tab.dart';
+import 'package:everroute/ui/screens/settings/widgets/payment_tab.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   late final SettingsCubit _settingsCubit;
   late final StaffServices _staffServices;
+  late final BillingServices _billingServices;
   final ImagePicker _imagePicker = ImagePicker();
   bool _signOutBusy = false;
   bool _scheduledLoad = false;
@@ -48,11 +53,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _profileImageUploading = false;
   String? _profileError;
   String _myRole = 'user';
+  BillingSubscriptionModel? _billingSubscription;
+  bool _billingBusy = false;
+  bool _billingActionBusy = false;
+  String? _billingError;
 
   @override
   void initState() {
     super.initState();
-    _staffServices = context.read<AppRepositories>().staff;
+    final repos = context.read<AppRepositories>();
+    _staffServices = repos.staff;
+    _billingServices = repos.billing;
     _settingsCubit = SettingsCubit(
       settingsServices: context.read<AppRepositories>().settings,
     );
@@ -99,7 +110,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await Future.wait([
       _settingsCubit.load(bearerToken: token),
       _loadMyProfile(bearerToken: token),
+      _loadBilling(bearerToken: token),
     ]);
+  }
+
+  Future<void> _loadBilling({required String bearerToken}) async {
+    if (!mounted) return;
+    setState(() {
+      _billingBusy = true;
+      _billingError = null;
+    });
+    try {
+      final sub = await _billingServices.getSubscription(bearerToken: bearerToken);
+      if (!mounted) return;
+      setState(() {
+        _billingSubscription = sub;
+        _billingBusy = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _billingBusy = false;
+        _billingError = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _billingBusy = false;
+        _billingError = e.toString();
+      });
+    }
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw StateError('Could not open billing page.');
+    }
+  }
+
+  Future<void> _startCheckout() async {
+    final token = staffBearerToken();
+    if (token == null || !_isAdmin) return;
+    setState(() => _billingActionBusy = true);
+    try {
+      final url = await _billingServices.createCheckoutSession(
+        bearerToken: token,
+      );
+      await _openExternalUrl(url);
+      if (!mounted) return;
+      EverrouteSnackBar.success(
+        context,
+        'Complete checkout in your browser, then return and tap Refresh status.',
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _billingActionBusy = false);
+    }
+  }
+
+  Future<void> _openBillingPortal() async {
+    final token = staffBearerToken();
+    if (token == null || !_isAdmin) return;
+    setState(() => _billingActionBusy = true);
+    try {
+      final url = await _billingServices.createPortalSession(
+        bearerToken: token,
+      );
+      await _openExternalUrl(url);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _billingActionBusy = false);
+    }
+  }
+
+  Future<void> _refreshBilling() async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    await _loadBilling(bearerToken: token);
   }
 
   Future<void> _loadMyProfile({required String bearerToken}) async {
@@ -359,7 +457,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             signOutBusy: _signOutBusy,
                           )
                         : DefaultTabController(
-                            length: 2,
+                            length: 3,
                             child: Column(
                               children: [
                                 Container(
@@ -386,6 +484,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     tabs: const [
                                       Tab(text: 'Funeral Home'),
                                       Tab(text: 'My Profile'),
+                                      Tab(text: 'Payment'),
                                     ],
                                   ),
                                 ),
@@ -418,6 +517,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         imageUploading: _profileImageUploading,
                                         onPickImage: _pickAndUploadProfileImage,
                                         onSave: _saveMyProfile,
+                                      ),
+                                      PaymentTab(
+                                        subscription: _billingSubscription,
+                                        loading: _billingBusy,
+                                        actionBusy: _billingActionBusy,
+                                        isAdmin: _isAdmin,
+                                        error: _billingError,
+                                        onRefresh: _refreshBilling,
+                                        onSubscribe: _startCheckout,
+                                        onManageBilling: _openBillingPortal,
                                       ),
                                     ],
                                   ),
