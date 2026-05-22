@@ -7,6 +7,7 @@ import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/staff_services.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
+import 'package:everroute/ui/widgets/everroute_back_button.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:everroute/ui/widgets/profile_image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -265,23 +266,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
               ),
               child: Row(
                 children: [
-                  // Back button
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.border),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 16,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
+                  const EverrouteBackButton(),
                   Expanded(
                     child: Text(
                       'Staff Member',

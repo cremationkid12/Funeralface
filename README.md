@@ -18,14 +18,10 @@ For a physical device, use your machine LAN IP instead of `localhost` in `.env` 
 - **DI:** `provider` + `AppRepositories` (`lib/app/app_repositories.dart`).
 - **Staff tabs:** Dashboard, Assignments, Staff, Settings under `lib/features/`.
 
-## Family deep links (P5 / P6.5)
+## Family status links (browser only)
 
-- In-app path: **`/family/<token>`** (see `FamilyAssignmentScreen` and `extractFamilyAssignmentToken` in `lib/core/deeplink/deeplink_parser.dart`).
-- Parser is strict by default: exact host match (when configured), only `/family/<token>`, and token-format validation; legacy `?token=` fallback is opt-in (`allowQueryFallback: true`).
-- **Android:** `AndroidManifest.xml` includes a `VIEW` intent-filter with `https`, host **`links.everroute.app`**, and `pathPrefix` **`/family/`**. Replace that host with your verified domain and complete [Digital Asset Links](https://developer.android.com/training/app-links) before production.
-- **iOS:** `Runner.entitlements` now includes Associated Domains scaffold for `applinks:links.everroute.app`. Replace host and publish `apple-app-site-association` before production.
-- Runtime link ingestion is wired through `app_links` in `main.dart` and routes matching links to `/family/<token>` only.
-- **Staff copy URL:** `FAMILY_LINK_BASE` (default `https://links.everroute.app`) is used on the assignment detail screen when generating/copying a family link so the clipboard matches your verified host. Override with `--dart-define=FAMILY_LINK_BASE=https://your-staging-host.example` when testing.
+Families view assignment status on the **website**, not inside the staff app.
 
-Manual check: run the app with `flutter run`, then open
-`http://localhost:<port>/family/<token>` is not available from the browser; use `adb shell am start -a android.intent.action.VIEW -d "https://links.everroute.app/family/<token>"` after updating the host to match your manifest.
+- Staff create/copy/email links from the expanded assignment card (`FAMILY_LINK_BASE` + `/family/<token>` via `AppEnv.familyShareUrlForToken`).
+- Set **`FAMILY_LINK_BASE`** in `.env` to your deployed web app origin (e.g. `https://everroutefuneral.com`). Override with `--dart-define=FAMILY_LINK_BASE=...` in CI if needed.
+- The mobile app does **not** register Android App Links or iOS Universal Links for family URLs.
