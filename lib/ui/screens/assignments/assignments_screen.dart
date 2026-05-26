@@ -9,9 +9,12 @@ import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/core/billing_family_share_guard.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
+import 'package:everroute/core/assignment_eta.dart';
+import 'package:everroute/ui/screens/assignments/widgets/assignment_eta_to_arrival_field.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_family_link_section.dart';
 import 'package:everroute/ui/screens/assignments/widgets/share_family_link_sheet.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
@@ -96,6 +99,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<void> _copyFamilyLink(String assignmentId) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return;
     final m = _assignmentMap(assignmentId);
     final t = m?['share_token']?.toString().trim();
     if (t == null || t.isEmpty) return;
@@ -107,6 +111,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<String?> _issueShareToken(String assignmentId) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return null;
     final token = staffBearerToken();
     if (token == null) return null;
     final newToken = generateFamilyShareToken();
@@ -131,6 +136,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     String assignmentId,
     String shareToken,
   ) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
     final sent = await showModalBottomSheet<bool>(
@@ -140,11 +146,14 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       builder: (_) => ShareFamilyLinkSheet(
         familyLink: AppEnv.familyShareUrlForToken(shareToken),
         onShare: (email) async {
-          await context.read<AppRepositories>().assignments.shareFamilyLinkByEmail(
-            assignmentId: assignmentId,
-            email: email,
-            bearerToken: token,
-          );
+          await context
+              .read<AppRepositories>()
+              .assignments
+              .shareFamilyLinkByEmail(
+                assignmentId: assignmentId,
+                email: email,
+                bearerToken: token,
+              );
         },
       ),
     );
@@ -154,6 +163,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<void> _openShareFamilyLinkFromCard(String assignmentId) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return;
     final m = _assignmentMap(assignmentId);
     final t = m?['share_token']?.toString().trim();
     if (t == null || t.isEmpty) return;
@@ -515,16 +525,6 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
     setState(() => _submitting = true);
     try {
       final notes = _notes.text.trim();
-      final now = DateTime.now();
-      final etaDateTime = _etaTime == null
-          ? null
-          : DateTime(
-              now.year,
-              now.month,
-              now.day,
-              _etaTime!.hour,
-              _etaTime!.minute,
-            );
       final payload = <String, dynamic>{
         'decedent_name': _decedentName.text.trim(),
         'pickup_address': _pickupAddress.text.trim(),
@@ -532,8 +532,9 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
         'contact_phone': _contactPhone.text.trim(),
         'status': _assignedStaffId == null ? 'pending' : 'assigned',
       };
-      if (etaDateTime != null) {
-        payload['eta_time'] = etaDateTime.toIso8601String();
+      final etaValue = etaTimeToApiValue(_etaTime);
+      if (etaValue != null) {
+        payload['eta_time'] = etaValue;
       }
       if (_assignedStaffId != null) {
         payload['assigned_staff_id'] = _assignedStaffId;
@@ -622,59 +623,11 @@ class _CreateAssignmentSheetState extends State<_CreateAssignmentSheet> {
                 onChanged: (value) => setState(() => _assignedStaffId = value),
               ),
               const SizedBox(height: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ETA to Arrival',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  InkWell(
-                    onTap: _submitting ? null : _pickEtaTime,
-                    borderRadius: BorderRadius.circular(12),
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        hintText: 'Select time',
-                        prefixIcon: const Padding(
-                          padding: EdgeInsets.only(left: 12, right: 8),
-                          child: Icon(
-                            Icons.schedule_outlined,
-                            color: AppColors.accent,
-                            size: 18,
-                          ),
-                        ),
-                        prefixIconConstraints: const BoxConstraints(
-                          minWidth: 0,
-                          minHeight: 0,
-                        ),
-                        suffixIcon: _etaTime == null
-                            ? null
-                            : IconButton(
-                                onPressed: _submitting
-                                    ? null
-                                    : () => setState(() => _etaTime = null),
-                                icon: const Icon(Icons.close_rounded, size: 18),
-                              ),
-                      ),
-                      child: Text(
-                        _etaTime == null
-                            ? 'Select time'
-                            : _etaTime!.format(context),
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: _etaTime == null
-                              ? AppColors.textSecondary
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              AssignmentEtaToArrivalField(
+                etaTime: _etaTime,
+                enabled: !_submitting,
+                onPick: _pickEtaTime,
+                onClear: () => setState(() => _etaTime = null),
               ),
               const SizedBox(height: 14),
               // Notes textarea

@@ -94,6 +94,52 @@ class AuthServices {
     );
   }
 
+  /// Exchanges emailed OTP for tokens. Does **not** persist locally — call
+  /// [completePasswordReset] after the user chooses a new password.
+  Future<AuthResult> verifyPasswordResetOtp({
+    required String email,
+    required String token,
+  }) async {
+    final data = await _apiClient.postJson(
+      '/v1/auth/password/otp/verify',
+      body: <String, dynamic>{
+        'email': email.trim(),
+        'token': token.trim().replaceAll(RegExp(r'\s'), ''),
+      },
+    );
+    final userId = data['user_id']?.toString() ?? '';
+    final accessToken = data['access_token']?.toString() ?? '';
+    final refreshToken = data['refresh_token']?.toString() ?? '';
+    if (userId.isEmpty ||
+        accessToken.isEmpty ||
+        refreshToken.isEmpty) {
+      throw StateError(
+        'OTP verification response did not contain a complete session.',
+      );
+    }
+    return AuthResult(
+      userId: userId,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+    );
+  }
+
+  Future<AuthResult> completePasswordReset({
+    required String accessToken,
+    required String refreshToken,
+    required String password,
+  }) async {
+    final data = await _apiClient.postJson(
+      '/v1/auth/password/reset-complete',
+      body: <String, dynamic>{
+        'access_token': accessToken.trim(),
+        'refresh_token': refreshToken.trim(),
+        'password': password,
+      },
+    );
+    return _persistAndMap(data);
+  }
+
   Future<void> logout() async {
     final accessToken = await _secureStorage.read(key: _keyAccessToken);
     if (accessToken != null && accessToken.isNotEmpty) {

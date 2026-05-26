@@ -52,14 +52,7 @@ class AppEnv {
     'http://localhost:8010',
   );
 
-  static String get deeplinkHost => _afterDefine(
-    'DEEPLINK_HOST',
-    const String.fromEnvironment('DEEPLINK_HOST', defaultValue: ''),
-    'localhost',
-  );
-
-  /// Base URL shown when staff copy a family link (no trailing slash).
-  /// Must match the verified App Links host in production.
+  /// Base URL for family status pages in the browser (no trailing slash).
   static String get familyLinkBaseUrl => _afterDefine(
     'FAMILY_LINK_BASE',
     const String.fromEnvironment('FAMILY_LINK_BASE', defaultValue: ''),
@@ -69,6 +62,12 @@ class AppEnv {
   static String familyShareUrlForToken(String token) {
     final base = familyLinkBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     return '$base/family/$token';
+  }
+
+  /// Public Terms of Use page (`{FAMILY_LINK_BASE}/terms-of-use`).
+  static String get termsOfUseUrl {
+    final base = familyLinkBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    return '$base/terms-of-use';
   }
 
   static String get supabaseUrl => _afterDefine(
@@ -92,4 +91,6 @@ class AppEnv {
 
   static bool get hasSupabaseAuthConfig =>
       supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;
+
+  static const int passwordResetOtpDigits = 8;
 }

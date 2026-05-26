@@ -25,12 +25,12 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Verified App Links: replace android:host with your production domain (P5). -->
-            <intent-filter android:autoVerify="true">
+            <!-- Stripe Checkout / Billing Portal return URLs (everroute://billing/...) -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="links.everroute.app" android:pathPrefix="/family/"/>
+                <data android:scheme="everroute" android:host="billing"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

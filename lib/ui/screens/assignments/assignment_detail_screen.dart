@@ -7,6 +7,8 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/services/assignments_services.dart';
+import 'package:everroute/core/assignment_eta.dart';
+import 'package:everroute/ui/screens/assignments/widgets/assignment_eta_to_arrival_field.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 
@@ -38,6 +40,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   String? _assignedStaffId;
   List<_AssignableStaffOption> _staffOptions = const [];
   var _loadingStaff = false;
+  TimeOfDay? _etaTime;
 
   @override
   void initState() {
@@ -66,7 +69,18 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         (rawAssignedStaffId != null && rawAssignedStaffId.isNotEmpty)
         ? rawAssignedStaffId
         : null;
+    _etaTime = etaTimeFromAssignmentValue(widget.initial['eta_time']);
     _loadAssignableStaff();
+  }
+
+  Future<void> _pickEtaTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _etaTime ?? TimeOfDay.now(),
+      helpText: 'Select ETA to Arrival',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _etaTime = picked);
   }
 
   @override
@@ -91,6 +105,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       _assignedStaffId = (assignedStaffId != null && assignedStaffId.isNotEmpty)
           ? assignedStaffId
           : null;
+      _etaTime = etaTimeFromAssignmentValue(body['eta_time']);
     });
   }
 
@@ -162,6 +177,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
           'notes': _notes.text.trim(),
           'status': statusToSave,
           'assigned_staff_id': _assignedStaffId,
+          'eta_time': etaTimeToApiValue(_etaTime),
         },
       );
       if (!mounted) return null;
@@ -333,6 +349,14 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 12),
+                    AssignmentEtaToArrivalField(
+                      etaTime: _etaTime,
+                      enabled: !_saving,
+                      useOutlinedBorder: true,
+                      onPick: _pickEtaTime,
+                      onClear: () => setState(() => _etaTime = null),
                     ),
                     const SizedBox(height: 12),
                     TextField(

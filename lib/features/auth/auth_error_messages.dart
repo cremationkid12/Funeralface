@@ -3,7 +3,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 /// The auth flow that produced an error. Used to pick a more
 /// helpful, contextual user-facing message.
-enum AuthAction { login, register, google, recover }
+enum AuthAction {
+  login,
+  register,
+  google,
+  recover,
+  verifyOtp,
+  completeReset,
+}
 
 /// Turn a raw exception coming from the auth services into a polished,
 /// user-facing message. Falls back to a generic, action-specific message
@@ -81,6 +88,10 @@ String _fromApiException(ApiException e, AuthAction action) {
           return "We couldn't create your account. Please try again.";
         case AuthAction.recover:
           return 'Your session has expired. Please log in again.';
+        case AuthAction.verifyOtp:
+          return 'That code is incorrect or has expired. Try again or request a new code.';
+        case AuthAction.completeReset:
+          return 'This session is invalid or has expired. Request a new code from the login screen.';
       }
     case 'bad_request':
       switch (action) {
@@ -90,6 +101,10 @@ String _fromApiException(ApiException e, AuthAction action) {
           return 'Please enter a valid email and password.';
         case AuthAction.recover:
           return 'Please enter a valid email address.';
+        case AuthAction.verifyOtp:
+          return 'Enter the verification code from your email.';
+        case AuthAction.completeReset:
+          return 'Please use a password of at least 8 characters.';
         case AuthAction.google:
           return "We couldn't read your Google credentials. Please try again.";
       }
@@ -151,5 +166,9 @@ String _fromMessage(String message, AuthAction action) {
       return "We couldn't sign you in with Google. Please try again.";
     case AuthAction.recover:
       return "We couldn't send the reset email. Please try again.";
+    case AuthAction.verifyOtp:
+      return "We couldn't verify that code. Please try again.";
+    case AuthAction.completeReset:
+      return "We couldn't update your password. Please try again or request a new reset link.";
   }
 }
