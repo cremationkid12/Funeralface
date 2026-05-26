@@ -78,6 +78,39 @@ class SettingsCubit extends Cubit<SettingsState> {
     }
   }
 
+  Future<String> uploadDirectorPhoto({
+    required String bearerToken,
+    required Uint8List fileBytes,
+    required String fileName,
+  }) async {
+    emit(state.copyWith(directorImageUploading: true, clearError: true));
+    try {
+      final imageUrl = await _settingsServices.uploadImageAsset(
+        bearerToken: bearerToken,
+        bytes: fileBytes,
+        fileName: fileName,
+        purpose: 'funeral_director_photo',
+      );
+      final nextSettings = Map<String, dynamic>.from(
+        state.settings ?? const {},
+      );
+      nextSettings['director_image_url'] = imageUrl;
+      emit(
+        state.copyWith(
+          directorImageUploading: false,
+          error: null,
+          settings: nextSettings,
+        ),
+      );
+      return imageUrl;
+    } catch (error) {
+      emit(
+        state.copyWith(directorImageUploading: false, error: error.toString()),
+      );
+      rethrow;
+    }
+  }
+
   void clear() {
     emit(const SettingsState());
   }

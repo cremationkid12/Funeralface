@@ -9,6 +9,7 @@ import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/core/billing_family_share_guard.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
@@ -98,6 +99,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<void> _copyFamilyLink(String assignmentId) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return;
     final m = _assignmentMap(assignmentId);
     final t = m?['share_token']?.toString().trim();
     if (t == null || t.isEmpty) return;
@@ -109,6 +111,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<String?> _issueShareToken(String assignmentId) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return null;
     final token = staffBearerToken();
     if (token == null) return null;
     final newToken = generateFamilyShareToken();
@@ -133,6 +136,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     String assignmentId,
     String shareToken,
   ) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
     final sent = await showModalBottomSheet<bool>(
@@ -159,6 +163,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<void> _openShareFamilyLinkFromCard(String assignmentId) async {
+    if (!await ensureSubscriptionAllowsFamilyShare(context)) return;
     final m = _assignmentMap(assignmentId);
     final t = m?['share_token']?.toString().trim();
     if (t == null || t.isEmpty) return;

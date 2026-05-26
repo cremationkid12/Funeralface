@@ -13,12 +13,33 @@ import 'package:everroute/ui/screens/staff/staff_screen.dart';
 import 'package:everroute/ui/screens/main_shell.dart';
 import 'package:go_router/go_router.dart';
 
+/// Maps Stripe Checkout / Billing Portal return URLs (`everroute://billing/...`).
+String? _stripeBillingReturnRedirect(GoRouterState state) {
+  final uri = state.uri;
+  if (uri.scheme == 'everroute' && uri.host == 'billing') {
+    final segment = uri.pathSegments.isNotEmpty
+        ? uri.pathSegments.first
+        : uri.path.replaceFirst('/', '');
+    final query = switch (segment) {
+      'success' => 'billing=success',
+      'cancel' => 'billing=cancel',
+      'portal' => 'billing=portal',
+      _ => null,
+    };
+    return query == null ? '/settings' : '/settings?$query';
+  }
+  return null;
+}
+
 /// Staff shell routes (dashboard, assignments, staff, settings, auth).
 GoRouter createAppRouter({String initialLocation = '/splash'}) {
   return GoRouter(
     initialLocation: initialLocation,
     refreshListenable: AuthSession.instance,
     redirect: (context, state) {
+      final billingReturn = _stripeBillingReturnRedirect(state);
+      if (billingReturn != null) return billingReturn;
+
       final path = state.uri.path;
       final authed = AuthSession.instance.isAuthenticated;
       final isAuth = path == '/auth' || path.startsWith('/auth/');
@@ -33,6 +54,19 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
         path: '/splash',
         name: 'splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      // HTTP-style paths if the platform normalizes everroute://billing/* this way.
+      GoRoute(
+        path: '/billing/success',
+        redirect: (_, __) => '/settings?billing=success',
+      ),
+      GoRoute(
+        path: '/billing/cancel',
+        redirect: (_, __) => '/settings?billing=cancel',
+      ),
+      GoRoute(
+        path: '/billing/portal',
+        redirect: (_, __) => '/settings?billing=portal',
       ),
       GoRoute(
         path: '/auth',
