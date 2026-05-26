@@ -12,10 +12,14 @@ import 'package:everroute/services/staff_services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:everroute/models/billing_subscription_model.dart';
+import 'package:everroute/services/billing_services.dart';
 import 'package:everroute/ui/screens/settings/widgets/funeral_home_tab.dart';
 import 'package:everroute/ui/screens/settings/widgets/my_profile_tab.dart';
+import 'package:everroute/ui/screens/settings/widgets/payment_tab.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -27,6 +31,10 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _homeFormKey = GlobalKey<FormState>();
   final _profileFormKey = GlobalKey<FormState>();
+  final _directorName = TextEditingController();
+  final _directorPhone = TextEditingController();
+  final _directorEmail = TextEditingController();
+  final _directorImageUrl = TextEditingController();
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _address = TextEditingController();
@@ -40,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   late final SettingsCubit _settingsCubit;
   late final StaffServices _staffServices;
+  late final BillingServices _billingServices;
   final ImagePicker _imagePicker = ImagePicker();
   bool _signOutBusy = false;
   bool _scheduledLoad = false;
@@ -48,11 +57,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _profileImageUploading = false;
   String? _profileError;
   String _myRole = 'user';
+  BillingSubscriptionModel? _billingSubscription;
+  bool _billingBusy = false;
+  bool _billingActionBusy = false;
+  String? _billingError;
+  String? _lastHandledBillingReturn;
 
   @override
   void initState() {
     super.initState();
-    _staffServices = context.read<AppRepositories>().staff;
+    final repos = context.read<AppRepositories>();
+    _staffServices = repos.staff;
+    _billingServices = repos.billing;
     _settingsCubit = SettingsCubit(
       settingsServices: context.read<AppRepositories>().settings,
     );
@@ -61,6 +77,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _settingsCubit.close();
+    _directorName.dispose();
+    _directorPhone.dispose();
+    _directorEmail.dispose();
+    _directorImageUrl.dispose();
     _name.dispose();
     _phone.dispose();
     _address.dispose();
@@ -77,6 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _handleStripeBillingReturn();
     if (_scheduledLoad) return;
     _scheduledLoad = true;
     if (staffBearerToken() == null) {
@@ -84,6 +105,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
     _load();
+  }
+
+  void _handleStripeBillingReturn() {
+    final billing = GoRouterState.of(context).uri.queryParameters['billing'];
+    if (billing == null || billing == _lastHandledBillingReturn) return;
+    _lastHandledBillingReturn = billing;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final token = staffBearerToken();
+      if (token != null) {
+        await _loadBilling(bearerToken: token);
+      }
+      if (!mounted) return;
+      switch (billing) {
+        case 'success':
+          EverrouteSnackBar.success(
+            context,
+            'Payment complete. Your subscription status is updated.',
+          );
+          break;
+        case 'cancel':
+          EverrouteSnackBar.error(context, 'Checkout was canceled.');
+          break;
+        case 'portal':
+          EverrouteSnackBar.success(context, 'Billing portal closed.');
+          break;
+      }
+      if (GoRouterState.of(context).uri.queryParameters.containsKey('billing')) {
+        context.go('/settings');
+      }
+    });
   }
 
   Future<void> _load() async {
@@ -99,7 +151,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await Future.wait([
       _settingsCubit.load(bearerToken: token),
       _loadMyProfile(bearerToken: token),
+      _loadBilling(bearerToken: token),
     ]);
+  }
+
+  Future<void> _loadBilling({required String bearerToken}) async {
+    if (!mounted) return;
+    setState(() {
+      _billingBusy = true;
+      _billingError = null;
+    });
+    try {
+      final sub = await _billingServices.getSubscription(bearerToken: bearerToken);
+      if (!mounted) return;
+      setState(() {
+        _billingSubscription = sub;
+        _billingBusy = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _billingBusy = false;
+        _billingError = e.message;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _billingBusy = false;
+        _billingError = e.toString();
+      });
+    }
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw StateError('Could not open billing page.');
+    }
+  }
+
+  Future<void> _startCheckout() async {
+    final token = staffBearerToken();
+    if (token == null || !_isAdmin) return;
+    setState(() => _billingActionBusy = true);
+    try {
+      final url = await _billingServices.createCheckoutSession(
+        bearerToken: token,
+      );
+      await _openExternalUrl(url);
+      if (!mounted) return;
+      EverrouteSnackBar.success(
+        context,
+        'Complete checkout in your browser, then return and tap Refresh status.',
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _billingActionBusy = false);
+    }
+  }
+
+  Future<void> _openBillingPortal() async {
+    final token = staffBearerToken();
+    if (token == null || !_isAdmin) return;
+    setState(() => _billingActionBusy = true);
+    try {
+      final url = await _billingServices.createPortalSession(
+        bearerToken: token,
+      );
+      await _openExternalUrl(url);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _billingActionBusy = false);
+    }
+  }
+
+  Future<void> _refreshBilling() async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    await _loadBilling(bearerToken: token);
   }
 
   Future<void> _loadMyProfile({required String bearerToken}) async {
@@ -133,28 +272,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _saveFuneralHome() async {
+  Future<void> _saveFuneralHomeTab() async {
     if (!_isAdmin) return;
     if (!(_homeFormKey.currentState?.validate() ?? false)) return;
     final token = staffBearerToken();
     if (token == null) return;
+
     try {
       await _settingsCubit.save(
         bearerToken: token,
         payload: {
+          'director_name': _directorName.text.trim(),
+          'director_phone': _directorPhone.text.trim(),
+          'director_email': _directorEmail.text.trim().isEmpty
+              ? null
+              : _directorEmail.text.trim(),
+          'director_image_url': _directorImageUrl.text.trim().isEmpty
+              ? null
+              : _directorImageUrl.text.trim(),
           'funeral_home_name': _name.text.trim(),
           'funeral_home_phone': _phone.text.trim(),
           'funeral_home_address': _address.text.trim(),
-          'logo_url': _logoUrl.text.trim().isEmpty
-              ? null
-              : _logoUrl.text.trim(),
+          'logo_url': _logoUrl.text.trim().isEmpty ? null : _logoUrl.text.trim(),
           'default_message': _defaultMessage.text.trim().isEmpty
               ? null
               : _defaultMessage.text.trim(),
         },
       );
+
       if (!mounted) return;
-      EverrouteSnackBar.success(context, 'Funeral Home information saved');
+      EverrouteSnackBar.success(
+        context,
+        'Funeral director and funeral home information saved',
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       EverrouteSnackBar.error(context, e.message);
@@ -253,6 +403,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _pickAndUploadDirectorImage(ImageSource source) async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final imageUrl = await _settingsCubit.uploadDirectorPhoto(
+        bearerToken: token,
+        fileBytes: bytes,
+        fileName: picked.name,
+      );
+      _directorImageUrl.text = imageUrl;
+      await _settingsCubit.save(
+        bearerToken: token,
+        payload: <String, dynamic>{'director_image_url': imageUrl},
+      );
+
+      if (!mounted) return;
+      EverrouteSnackBar.success(context, 'Director photo uploaded and saved');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.message);
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    }
+  }
+
   Future<void> _pickAndUploadLogo(ImageSource source) async {
     final token = staffBearerToken();
     if (token == null) return;
@@ -287,6 +470,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _applySettings(Map<String, dynamic> data) {
+    _directorName.text = data['director_name']?.toString() ?? '';
+    _directorPhone.text = data['director_phone']?.toString() ?? '';
+    _directorEmail.text = data['director_email']?.toString() ?? '';
+    _directorImageUrl.text = data['director_image_url']?.toString() ?? '';
     _name.text = data['funeral_home_name']?.toString() ?? '';
     _phone.text = data['funeral_home_phone']?.toString() ?? '';
     _address.text = data['funeral_home_address']?.toString() ?? '';
@@ -359,7 +546,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             signOutBusy: _signOutBusy,
                           )
                         : DefaultTabController(
-                            length: 2,
+                            length: 3,
+                            initialIndex:
+                                GoRouterState.of(context)
+                                        .uri
+                                        .queryParameters['billing'] !=
+                                    null
+                                ? 2
+                                : 0,
                             child: Column(
                               children: [
                                 Container(
@@ -386,6 +580,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     tabs: const [
                                       Tab(text: 'Funeral Home'),
                                       Tab(text: 'My Profile'),
+                                      Tab(text: 'Payment'),
                                     ],
                                   ),
                                 ),
@@ -394,6 +589,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     children: [
                                       FuneralHomeTab(
                                         formKey: _homeFormKey,
+                                        directorImageUrlController:
+                                            _directorImageUrl,
+                                        directorNameController: _directorName,
+                                        directorPhoneController:
+                                            _directorPhone,
+                                        directorEmailController:
+                                            _directorEmail,
                                         nameController: _name,
                                         phoneController: _phone,
                                         addressController: _address,
@@ -401,9 +603,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         defaultMessageController:
                                             _defaultMessage,
                                         saving: state.saving,
+                                        directorImageUploading:
+                                            state.directorImageUploading,
                                         logoUploading: state.logoUploading,
-                                        editable: _isAdmin,
-                                        onSave: _saveFuneralHome,
+                                        homeEditable: _isAdmin,
+                                        onSave: _saveFuneralHomeTab,
+                                        onPickDirectorImage:
+                                            _pickAndUploadDirectorImage,
                                         onPickLogo: _pickAndUploadLogo,
                                       ),
                                       MyProfileTab(
@@ -418,6 +624,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         imageUploading: _profileImageUploading,
                                         onPickImage: _pickAndUploadProfileImage,
                                         onSave: _saveMyProfile,
+                                      ),
+                                      PaymentTab(
+                                        subscription: _billingSubscription,
+                                        loading: _billingBusy,
+                                        actionBusy: _billingActionBusy,
+                                        isAdmin: _isAdmin,
+                                        error: _billingError,
+                                        onRefresh: _refreshBilling,
+                                        onSubscribe: _startCheckout,
+                                        onManageBilling: _openBillingPortal,
                                       ),
                                     ],
                                   ),
