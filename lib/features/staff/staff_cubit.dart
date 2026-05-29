@@ -12,8 +12,18 @@ class StaffCubit extends Cubit<StaffState> {
   Future<void> load({required String bearerToken}) async {
     emit(state.copyWith(busy: true, clearError: true));
     try {
+      final profile = await _staffServices.getMyProfile(bearerToken: bearerToken);
+      final isAdmin =
+          profile['role']?.toString().trim().toLowerCase() == 'admin';
       final items = await _staffServices.listStaff(bearerToken: bearerToken);
-      emit(state.copyWith(busy: false, items: items, error: null));
+      emit(
+        state.copyWith(
+          busy: false,
+          items: items,
+          error: null,
+          isAdmin: isAdmin,
+        ),
+      );
     } catch (error) {
       emit(state.copyWith(busy: false, error: error.toString()));
     }
