@@ -4,6 +4,7 @@ import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/write_access_guard.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/staff_services.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
@@ -112,6 +113,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   }
 
   Future<void> _save() async {
+    if (!await ensureAdminWriteAccess(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
     setState(() => _busy = true);
@@ -137,6 +139,10 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
       Navigator.of(context).pop(updated);
     } on ApiException catch (e) {
       if (!mounted) return;
+      if (e.code == 'subscription_required' || e.code == 'forbidden') {
+        await showWriteAccessApiError(context, e);
+        return;
+      }
       EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;

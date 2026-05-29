@@ -6,6 +6,7 @@ import 'package:everroute/features/settings/settings_state.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/features/session/auth_session.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/write_access_guard.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/services/auth_services.dart';
 import 'package:everroute/services/staff_services.dart';
@@ -274,6 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _saveFuneralHomeTab() async {
     if (!_isAdmin) return;
+    if (!await ensureAdminWriteAccess(context, isAdmin: _isAdmin)) return;
     if (!(_homeFormKey.currentState?.validate() ?? false)) return;
     final token = staffBearerToken();
     if (token == null) return;
@@ -307,6 +309,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
+      if (e.code == 'subscription_required' || e.code == 'forbidden') {
+        await showWriteAccessApiError(context, e);
+        return;
+      }
       EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
@@ -316,6 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _saveMyProfile() async {
     if (!(_profileFormKey.currentState?.validate() ?? false)) return;
+    if (!await ensureOrgIsSubscribed(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
     setState(() => _profileSaving = true);
@@ -336,6 +343,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       EverrouteSnackBar.success(context, 'Profile saved');
     } on ApiException catch (e) {
       if (!mounted) return;
+      if (e.code == 'subscription_required' || e.code == 'forbidden') {
+        await showWriteAccessApiError(context, e);
+        return;
+      }
       EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;

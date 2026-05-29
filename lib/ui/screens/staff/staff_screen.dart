@@ -5,6 +5,7 @@ import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/features/staff/staff_state.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/write_access_guard.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/ui/screens/staff/widgets/staff_card.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
@@ -54,6 +55,7 @@ class _StaffScreenState extends State<StaffScreen> {
   Future<void> _refresh() => _load();
 
   Future<void> _openAddSheet() async {
+    if (!await ensureAdminWriteAccess(context)) return;
     await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -72,6 +74,7 @@ class _StaffScreenState extends State<StaffScreen> {
   }
 
   Future<void> _openInviteSheet() async {
+    if (!await ensureAdminWriteAccess(context)) return;
     final invited = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,

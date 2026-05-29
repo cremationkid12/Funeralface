@@ -6,6 +6,7 @@ import 'package:everroute/features/dashboard/dashboard_cubit.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/write_access_guard.dart';
 import 'package:everroute/services/assignments_services.dart';
 import 'package:everroute/core/assignment_eta.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_eta_to_arrival_field.dart';
@@ -157,6 +158,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   }
 
   Future<void> _save() async {
+    if (!await ensureAdminWriteAccess(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
     setState(() => _saving = true);
@@ -187,6 +189,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
       EverrouteSnackBar.success(context, 'Assignment saved');
     } on ApiException catch (e) {
       if (!mounted) return null;
+      if (e.code == 'subscription_required' || e.code == 'forbidden') {
+        await showWriteAccessApiError(context, e);
+        return;
+      }
       EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return null;
