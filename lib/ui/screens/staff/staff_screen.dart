@@ -101,7 +101,9 @@ class _StaffScreenState extends State<StaffScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: BlocBuilder<StaffCubit, StaffState>(
-          builder: (context, state) => Column(
+          builder: (context, state) {
+            final canManageStaff = state.isAdmin;
+            return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Header card ──────────────────────────────────────────────
@@ -132,41 +134,44 @@ class _StaffScreenState extends State<StaffScreen> {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ),
-                    // Invite button
-                    GestureDetector(
-                      onTap: token == null ? null : _openInviteSheet,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.mail_outline_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Add button
-                    GestureDetector(
-                      onTap: token == null ? null : _openAddSheet,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.person_add_outlined,
-                          color: Colors.white,
-                          size: 20,
+                    if (canManageStaff) ...[
+                      // Invite button
+                      GestureDetector(
+                        onTap: token == null ? null : _openInviteSheet,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.accent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.mail_outline_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      // Add button
+                      GestureDetector(
+                        onTap: token == null ? null : _openAddSheet,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.person_add_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ] else
+                      const SizedBox(width: 40),
                   ],
                 ),
               ),
@@ -248,7 +253,8 @@ class _StaffScreenState extends State<StaffScreen> {
                       ),
               ),
             ],
-          ),
+            );
+          },
         ),
       ),
     );
