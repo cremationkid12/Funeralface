@@ -10,6 +10,7 @@ import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/core/billing_family_share_guard.dart';
+import 'package:everroute/core/write_access_guard.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/family_share_token.dart';
 import 'package:everroute/ui/screens/assignments/widgets/assignment_card.dart';
@@ -68,6 +69,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
     required String assignmentId,
     required String status,
   }) async {
+    if (!await ensureAdminWriteAccess(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
     try {
@@ -83,6 +85,10 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
       );
     } on ApiException catch (e) {
       if (!mounted) return;
+      if (e.code == 'subscription_required' || e.code == 'forbidden') {
+        await showWriteAccessApiError(context, e);
+        return;
+      }
       EverrouteSnackBar.error(context, e.message);
     } catch (e) {
       if (!mounted) return;
@@ -111,6 +117,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<String?> _issueShareToken(String assignmentId) async {
+    if (!await ensureAdminWriteAccess(context)) return null;
     if (!await ensureSubscriptionAllowsFamilyShare(context)) return null;
     final token = staffBearerToken();
     if (token == null) return null;
@@ -193,6 +200,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 
   Future<void> _openCreateSheet() async {
+    if (!await ensureAdminWriteAccess(context)) return;
     List<_AssignableStaffOption> staffOptions = const [];
     try {
       staffOptions = await _loadAssignableStaffOptions();
