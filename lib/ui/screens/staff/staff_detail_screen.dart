@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
+import 'package:everroute/features/staff/staff_state.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/write_access_guard.dart';
@@ -10,6 +11,7 @@ import 'package:everroute/services/staff_services.dart';
 import 'package:everroute/ui/widgets/app_buttons.dart';
 import 'package:everroute/ui/widgets/everroute_back_button.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
+import 'package:everroute/ui/screens/staff/widgets/role_chip.dart';
 import 'package:everroute/ui/widgets/profile_image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -73,6 +75,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   }
 
   Future<void> _pickAndUploadProfileImage(ImageSource source) async {
+    if (!await ensureAdminWriteAccess(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
     try {
@@ -153,6 +156,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   }
 
   Future<void> _toggleActive(bool next) async {
+    if (!await ensureAdminWriteAccess(context)) return;
     final token = staffBearerToken();
     if (token == null) return;
 
@@ -197,6 +201,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   }
 
   Future<void> _confirmDelete() async {
+    if (!await ensureAdminWriteAccess(context)) return;
     final ok = await _showConfirmModal(
       icon: Icons.delete_outline_rounded,
       title: 'Remove staff member?',
@@ -249,7 +254,11 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
   Widget build(BuildContext context) {
     final token = staffBearerToken();
 
-    return Scaffold(
+    return BlocBuilder<StaffCubit, StaffState>(
+      builder: (context, staffState) {
+        final canEdit = staffState.isAdmin;
+
+        return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
@@ -280,31 +289,33 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  // Save button
-                  GestureDetector(
-                    onTap: token == null || _busy ? null : _save,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.accent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: _busy
-                          ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                  if (canEdit)
+                    GestureDetector(
+                      onTap: token == null || _busy ? null : _save,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: _busy
+                            ? const Padding(
+                                padding: EdgeInsets.all(10),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.check_rounded,
                                 color: Colors.white,
+                                size: 20,
                               ),
-                            )
-                          : const Icon(
-                              Icons.check_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                    ),
-                  ),
+                      ),
+                    )
+                  else
+                    const SizedBox(width: 40),
                 ],
               ),
             ),
@@ -314,12 +325,37 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                 children: [
+                  if (!canEdit) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentSurface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'View only. Only admins can edit staff members.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // ── Profile photo (same pattern as list card / My Profile) ─
                   ProfileImagePicker(
                     imageUrlController: _profileImageUrl,
                     uploading: _imageUploading,
-                    disabled: token == null || _busy || _imageUploading,
-                    onPickImage: _pickAndUploadProfileImage,
+                    disabled:
+                        !canEdit || token == null || _busy || _imageUploading,
+                    onPickImage: canEdit
+                        ? _pickAndUploadProfileImage
+                        : (_) async {},
                   ),
                   const SizedBox(height: 24),
 
@@ -330,7 +366,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                         label: 'Name',
                         controller: _name,
                         icon: Icons.person_outline_rounded,
-                        enabled: !_busy,
+                        enabled: canEdit && !_busy,
                       ),
                       const SizedBox(height: 14),
                       _DetailField(
@@ -338,7 +374,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                         controller: _phone,
                         icon: Icons.phone_outlined,
                         keyboardType: TextInputType.phone,
-                        enabled: !_busy,
+                        enabled: canEdit && !_busy,
                       ),
                       const SizedBox(height: 14),
                       _DetailField(
@@ -346,14 +382,14 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                         controller: _email,
                         icon: Icons.mail_outline_rounded,
                         keyboardType: TextInputType.emailAddress,
-                        enabled: !_busy,
+                        enabled: canEdit && !_busy,
                       ),
                       const SizedBox(height: 14),
                       _DetailFieldLabel('Bio'),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _bio,
-                        enabled: !_busy,
+                        enabled: canEdit && !_busy,
                         maxLines: 2,
                         textInputAction: TextInputAction.newline,
                         style: GoogleFonts.poppins(fontSize: 14),
@@ -367,46 +403,54 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      // Role dropdown
                       _DetailFieldLabel('Role'),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        initialValue: _role,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: AppColors.textPrimary,
-                        ),
-                        decoration: InputDecoration(
-                          prefixIcon: Padding(
-                            padding: const EdgeInsets.only(left: 12, right: 8),
-                            child: const Icon(
-                              Icons.work_outline_rounded,
-                              color: AppColors.accent,
-                              size: 18,
+                      if (canEdit)
+                        DropdownButtonFormField<String>(
+                          initialValue: _role,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                          decoration: InputDecoration(
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.only(
+                                left: 12,
+                                right: 8,
+                              ),
+                              child: const Icon(
+                                Icons.work_outline_rounded,
+                                color: AppColors.accent,
+                                size: 18,
+                              ),
+                            ),
+                            prefixIconConstraints: const BoxConstraints(
+                              minWidth: 0,
+                              minHeight: 0,
                             ),
                           ),
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 0,
-                            minHeight: 0,
-                          ),
-                        ),
-                        items: StaffServices.roles
-                            .map(
-                              (r) => DropdownMenuItem<String>(
-                                value: r,
-                                child: Text(
-                                  r[0].toUpperCase() + r.substring(1),
-                                  style: GoogleFonts.poppins(fontSize: 14),
+                          items: StaffServices.roles
+                              .map(
+                                (r) => DropdownMenuItem<String>(
+                                  value: r,
+                                  child: Text(
+                                    r[0].toUpperCase() + r.substring(1),
+                                    style: GoogleFonts.poppins(fontSize: 14),
+                                  ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _busy
-                            ? null
-                            : (v) {
-                                if (v != null) setState(() => _role = v);
-                              },
-                      ),
+                              )
+                              .toList(),
+                          onChanged: _busy
+                              ? null
+                              : (v) {
+                                  if (v != null) setState(() => _role = v);
+                                },
+                        )
+                      else
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: RoleChip(role: _role),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -440,23 +484,25 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
                       ),
                       value: _active,
                       activeThumbColor: AppColors.primary,
-                      onChanged: _busy ? null : _toggleActive,
+                      onChanged: canEdit && !_busy ? _toggleActive : null,
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // ── Remove button ────────────────────────────────────────
-                  AppAccentButton(
-                    label: 'Remove Staff Member',
-                    icon: Icons.delete_outline_rounded,
-                    onPressed: _busy ? null : _confirmDelete,
-                  ),
+                  if (canEdit) ...[
+                    const SizedBox(height: 24),
+                    AppAccentButton(
+                      label: 'Remove Staff Member',
+                      icon: Icons.delete_outline_rounded,
+                      onPressed: _busy ? null : _confirmDelete,
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
       ),
+        );
+      },
     );
   }
 }
