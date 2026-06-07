@@ -111,6 +111,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _handleStripeBillingReturn() {
     final billing = GoRouterState.of(context).uri.queryParameters['billing'];
     if (billing == null || billing == _lastHandledBillingReturn) return;
+    if (billing != 'success' && billing != 'cancel' && billing != 'portal') {
+      return;
+    }
     _lastHandledBillingReturn = billing;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {

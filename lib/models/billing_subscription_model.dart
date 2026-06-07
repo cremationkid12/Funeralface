@@ -7,8 +7,11 @@ class BillingSubscriptionModel {
     required this.trialDays,
     required this.isSubscribed,
     required this.cancelAtPeriodEnd,
+    required this.trialExpiringSoon,
+    required this.isAppTrial,
     this.trialEndsAt,
     this.currentPeriodEnd,
+    this.trialDaysRemaining,
   });
 
   final String orgId;
@@ -18,8 +21,11 @@ class BillingSubscriptionModel {
   final int trialDays;
   final bool isSubscribed;
   final bool cancelAtPeriodEnd;
+  final bool trialExpiringSoon;
+  final bool isAppTrial;
   final DateTime? trialEndsAt;
   final DateTime? currentPeriodEnd;
+  final int? trialDaysRemaining;
 
   factory BillingSubscriptionModel.fromJson(Map<String, dynamic> json) {
     return BillingSubscriptionModel(
@@ -30,8 +36,11 @@ class BillingSubscriptionModel {
       trialDays: (json['trial_days'] as num?)?.toInt() ?? 7,
       isSubscribed: json['is_subscribed'] == true,
       cancelAtPeriodEnd: json['cancel_at_period_end'] == true,
+      trialExpiringSoon: json['trial_expiring_soon'] == true,
+      isAppTrial: json['is_app_trial'] == true,
       trialEndsAt: _parseDate(json['trial_ends_at']),
       currentPeriodEnd: _parseDate(json['current_period_end']),
+      trialDaysRemaining: (json['trial_days_remaining'] as num?)?.toInt(),
     );
   }
 
@@ -40,12 +49,20 @@ class BillingSubscriptionModel {
     return DateTime.tryParse(value.toString());
   }
 
+  bool get hadAppTrial => trialEndsAt != null;
+
+  bool get trialHasExpired =>
+      !isSubscribed && hadAppTrial && (trialDaysRemaining ?? 0) <= 0;
+
   String get planLabel {
     final dollars = (planAmountCents / 100).toStringAsFixed(2);
     return '\$$dollars/${planInterval == 'month' ? 'mo' : planInterval}';
   }
 
   String get statusLabel {
+    if (isAppTrial && isSubscribed) {
+      return 'Free trial';
+    }
     switch (status) {
       case 'trialing':
         return 'Free trial';
@@ -60,7 +77,7 @@ class BillingSubscriptionModel {
       case 'incomplete':
         return 'Incomplete';
       default:
-        return 'Not subscribed';
+        return trialHasExpired ? 'Trial ended' : 'Not subscribed';
     }
   }
 }
