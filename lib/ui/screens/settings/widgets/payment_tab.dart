@@ -90,12 +90,27 @@ class PaymentTab extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '${sub?.trialDays ?? 7}-day free trial, then billed monthly.',
+                sub?.isAppTrial == true
+                    ? 'Your ${sub?.trialDays ?? 7}-day free trial is active. '
+                          'Subscribe before it ends to keep full access.'
+                    : '${sub?.trialDays ?? 7}-day free trial, then billed monthly.',
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
               ),
+              if (sub?.isAppTrial == true &&
+                  sub?.trialDaysRemaining != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '${sub!.trialDaysRemaining} day${sub.trialDaysRemaining == 1 ? '' : 's'} left in your free trial.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               _StatusRow(
                 label: 'Status',
@@ -139,9 +154,24 @@ class PaymentTab extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           )
-        else if (sub != null && !sub.isSubscribed) ...[
+        else if (sub != null && sub.isAppTrial) ...[
           AppPrimaryButton(
-            label: actionBusy ? 'Opening checkout…' : 'Start free trial',
+            label: actionBusy ? 'Opening checkout…' : 'Subscribe before trial ends',
+            onPressed: actionBusy ? null : onSubscribe,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Optional now — your free trial already includes full app access. '
+            'Add a payment method in Stripe when you are ready.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ] else if (sub != null && !sub.isSubscribed) ...[
+          AppPrimaryButton(
+            label: actionBusy ? 'Opening checkout…' : 'Subscribe',
             onPressed: actionBusy ? null : onSubscribe,
           ),
           const SizedBox(height: 10),

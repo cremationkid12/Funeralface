@@ -1,20 +1,100 @@
-import 'package:flutter/material.dart';
+import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/core/trial_prompt_preferences.dart';
 import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/features/session/auth_session.dart';
+import 'package:everroute/features/session/staff_auth.dart';
+import 'package:everroute/ui/widgets/trial_prompt_dialogs.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   const MainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  bool _trialPromptsScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AuthSession.instance.addListener(_onAuthSessionChanged);
+  }
+
+  @override
+  void dispose() {
+    AuthSession.instance.removeListener(_onAuthSessionChanged);
+    super.dispose();
+  }
+
+  void _onAuthSessionChanged() {
+    _trialPromptsScheduled = false;
+    _scheduleTrialPromptsIfNeeded();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleTrialPromptsIfNeeded();
+  }
+
+  void _scheduleTrialPromptsIfNeeded() {
+    if (_trialPromptsScheduled || staffBearerToken() == null) return;
+    _trialPromptsScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowTrialPrompts());
+  }
+
+  Future<void> _maybeShowTrialPrompts() async {
+    if (!mounted) return;
+    final token = staffBearerToken();
+    if (token == null) return;
+
+    try {
+      final sub = await context
+          .read<AppRepositories>()
+          .billing
+          .getSubscription(bearerToken: token);
+      if (!mounted) return;
+
+      final prefs = TrialPromptPreferences();
+
+      if (sub.isAppTrial && sub.isSubscribed) {
+        final pendingWelcome = await prefs.consumePendingWelcome();
+        final shownWelcome = await prefs.hasShownWelcome(sub.orgId);
+        if (pendingWelcome || !shownWelcome) {
+          if (!mounted) return;
+          await showTrialWelcomeDialog(context, subscription: sub);
+          await prefs.markWelcomeShown(sub.orgId);
+          return;
+        }
+
+        if (sub.trialExpiringSoon) {
+          final warned = await prefs.hasShownExpiryWarningToday(sub.orgId);
+          if (!warned) {
+            if (!mounted) return;
+            await showTrialExpiringSoonDialog(context, subscription: sub);
+            await prefs.markExpiryWarningShownToday(sub.orgId);
+          }
+        }
+      }
+    } catch (_) {
+      // Non-fatal: app remains usable if billing status cannot be loaded.
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      body: widget.navigationShell,
       bottomNavigationBar: _AppNavBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: navigationShell.goBranch,
+        selectedIndex: widget.navigationShell.currentIndex,
+        onDestinationSelected: widget.navigationShell.goBranch,
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
+import 'package:everroute/core/trial_prompt_preferences.dart';
 import 'package:everroute/features/auth/auth_cubit.dart';
 import 'package:everroute/features/auth/auth_state.dart';
 import 'package:everroute/ui/screens/auth/widgets/auth_field_label.dart';
@@ -102,6 +103,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
     if (!mounted) return;
     if (_authCubit.state.success) {
+      await TrialPromptPreferences().markWelcomePendingAfterSignup();
       context.go('/dashboard');
     }
   }

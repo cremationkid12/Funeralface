@@ -2,6 +2,7 @@ import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/session/staff_auth.dart';
+import 'package:everroute/models/billing_subscription_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -23,31 +24,37 @@ Future<String?> loadMyRole(BuildContext context) async {
   }
 }
 
-Future<bool> _orgIsSubscribed(BuildContext context) async {
+Future<BillingSubscriptionModel?> _loadSubscription(BuildContext context) async {
   final bearer = staffBearerToken();
-  if (bearer == null) return false;
+  if (bearer == null) return null;
   try {
-    final sub = await context
+    return await context
         .read<AppRepositories>()
         .billing
         .getSubscription(bearerToken: bearer);
-    return sub.isSubscribed;
   } catch (_) {
-    return false;
+    return null;
   }
 }
 
-Future<void> _showSubscriptionRequiredDialog(BuildContext context) {
+Future<void> _showSubscriptionRequiredDialog(
+  BuildContext context, {
+  required bool trialExpired,
+}) {
+  final message = trialExpired
+      ? 'Your 7-day free trial has ended. Subscribe in Settings → Payment to '
+          'continue making changes.'
+      : 'Subscribe in Settings → Payment to continue making changes.';
+
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: Text(
-        'Subscription required',
+        trialExpired ? 'Free trial ended' : 'Subscription required',
         style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
       ),
       content: Text(
-        'Your free trial has ended or your subscription is inactive. '
-        'Subscribe in Settings → Payment to continue making changes.',
+        message,
         style: GoogleFonts.poppins(fontSize: 14, color: AppColors.textSecondary),
       ),
       actions: [
@@ -58,7 +65,9 @@ Future<void> _showSubscriptionRequiredDialog(BuildContext context) {
         TextButton(
           onPressed: () {
             Navigator.of(dialogContext).pop();
-            dialogContext.go('/settings');
+            if (context.mounted) {
+              context.go('/settings?billing=payment');
+            }
           },
           child: const Text('Go to Payment'),
         ),
@@ -92,9 +101,13 @@ Future<void> _showPermissionDeniedDialog(BuildContext context) {
 
 /// Org must have trialing/active subscription (all roles).
 Future<bool> ensureOrgIsSubscribed(BuildContext context) async {
-  if (await _orgIsSubscribed(context)) return true;
+  final sub = await _loadSubscription(context);
+  if (sub?.isSubscribed == true) return true;
   if (!context.mounted) return false;
-  await _showSubscriptionRequiredDialog(context);
+  await _showSubscriptionRequiredDialog(
+    context,
+    trialExpired: sub?.trialHasExpired == true,
+  );
   return false;
 }
 
@@ -117,7 +130,12 @@ Future<bool> ensureAdminWriteAccess(
 Future<void> showWriteAccessApiError(BuildContext context, ApiException error) async {
   if (!context.mounted) return;
   if (error.code == 'subscription_required') {
-    await _showSubscriptionRequiredDialog(context);
+    final sub = await _loadSubscription(context);
+    if (!context.mounted) return;
+    await _showSubscriptionRequiredDialog(
+      context,
+      trialExpired: sub?.trialHasExpired == true,
+    );
     return;
   }
   if (error.code == 'forbidden') {
