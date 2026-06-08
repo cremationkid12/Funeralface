@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>EverRoute needs camera access so you can take profile and funeral home photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>EverRoute needs photo library access so you can choose profile and funeral home images.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>EverRoute may save photos you take in the app to your photo library.</string>
 </dict>
 </plist>
