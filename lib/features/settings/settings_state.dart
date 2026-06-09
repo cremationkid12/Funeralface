@@ -3,7 +3,6 @@ class SettingsState {
     this.busy = false,
     this.saving = false,
     this.logoUploading = false,
-    this.directorImageUploading = false,
     this.error,
     this.settings,
   });
@@ -11,7 +10,6 @@ class SettingsState {
   final bool busy;
   final bool saving;
   final bool logoUploading;
-  final bool directorImageUploading;
   final String? error;
   final Map<String, dynamic>? settings;
 
@@ -19,7 +17,6 @@ class SettingsState {
     bool? busy,
     bool? saving,
     bool? logoUploading,
-    bool? directorImageUploading,
     String? error,
     Map<String, dynamic>? settings,
     bool clearError = false,
@@ -28,8 +25,6 @@ class SettingsState {
       busy: busy ?? this.busy,
       saving: saving ?? this.saving,
       logoUploading: logoUploading ?? this.logoUploading,
-      directorImageUploading:
-          directorImageUploading ?? this.directorImageUploading,
       error: clearError ? null : (error ?? this.error),
       settings: settings ?? this.settings,
     );
