@@ -7,45 +7,33 @@ class FuneralHomeTab extends StatelessWidget {
   const FuneralHomeTab({
     super.key,
     required this.formKey,
-    required this.directorImageUrlController,
-    required this.directorNameController,
-    required this.directorPhoneController,
-    required this.directorEmailController,
     required this.nameController,
     required this.phoneController,
     required this.addressController,
     required this.logoUrlController,
     required this.defaultMessageController,
     required this.saving,
-    required this.directorImageUploading,
     required this.logoUploading,
     required this.homeEditable,
     required this.onSave,
-    required this.onPickDirectorImage,
     required this.onPickLogo,
   });
 
   final GlobalKey<FormState> formKey;
-  final TextEditingController directorImageUrlController;
-  final TextEditingController directorNameController;
-  final TextEditingController directorPhoneController;
-  final TextEditingController directorEmailController;
   final TextEditingController nameController;
   final TextEditingController phoneController;
   final TextEditingController addressController;
   final TextEditingController logoUrlController;
   final TextEditingController defaultMessageController;
   final bool saving;
-  final bool directorImageUploading;
   final bool logoUploading;
   final bool homeEditable;
   final VoidCallback onSave;
-  final ProfileImagePickCallback onPickDirectorImage;
   final ProfileImagePickCallback onPickLogo;
 
   @override
   Widget build(BuildContext context) {
-    final fieldsDisabled = saving || directorImageUploading || logoUploading;
+    final fieldsDisabled = saving || logoUploading;
 
     return Form(
       key: formKey,
@@ -68,66 +56,6 @@ class FuneralHomeTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const _SectionHeading('Funeral Director Information'),
-                const SizedBox(height: 12),
-                ProfileImagePicker(
-                  imageUrlController: directorImageUrlController,
-                  uploading: directorImageUploading,
-                  disabled: !homeEditable || fieldsDisabled,
-                  onPickImage: onPickDirectorImage,
-                ),
-                const SizedBox(height: 20),
-                _SettingsField(
-                  label: 'Director Name',
-                  controller: directorNameController,
-                  hint: 'eg. John Smith',
-                  icon: Icons.person_outline_rounded,
-                  enabled: homeEditable && !fieldsDisabled,
-                  validator: homeEditable
-                      ? (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Required' : null
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                _SettingsField(
-                  label: 'Phone',
-                  controller: directorPhoneController,
-                  hint: '555-1234',
-                  icon: Icons.phone_outlined,
-                  enabled: homeEditable && !fieldsDisabled,
-                  keyboardType: TextInputType.phone,
-                  validator: homeEditable
-                      ? (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Required' : null
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                _SettingsField(
-                  label: 'Email',
-                  controller: directorEmailController,
-                  hint: 'eg. john@example.com',
-                  icon: Icons.mail_outline_rounded,
-                  enabled: homeEditable && !fieldsDisabled,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 24),
-                const _SectionHeading('Family Message (OPTIONAL)'),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: defaultMessageController,
-                  enabled: homeEditable && !fieldsDisabled,
-                  maxLines: 3,
-                  style: GoogleFonts.poppins(fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Write here ...',
-                    hintStyle: GoogleFonts.poppins(
-                      color: AppColors.textSecondary,
-                      fontSize: 14,
-                    ),
-                    contentPadding: const EdgeInsets.all(14),
-                  ),
-                ),
-                const SizedBox(height: 24),
                 const _SectionHeading('Funeral Home Information'),
                 const SizedBox(height: 12),
                 ProfileImagePicker(
@@ -173,6 +101,23 @@ class FuneralHomeTab extends StatelessWidget {
                       ? (v) =>
                             (v == null || v.trim().isEmpty) ? 'Required' : null
                       : null,
+                ),
+                const SizedBox(height: 24),
+                const _SectionHeading('Family Message (OPTIONAL)'),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: defaultMessageController,
+                  enabled: homeEditable && !fieldsDisabled,
+                  maxLines: 3,
+                  style: GoogleFonts.poppins(fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Write here ...',
+                    hintStyle: GoogleFonts.poppins(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                    contentPadding: const EdgeInsets.all(14),
+                  ),
                 ),
               ],
             ),
