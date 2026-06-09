@@ -5,7 +5,6 @@ class AssignmentsState {
     this.items = const [],
     this.filteredItems = const [],
     this.searchQuery = '',
-    this.expandedIds = const <String>{},
     this.error,
   });
 
@@ -14,7 +13,6 @@ class AssignmentsState {
   final List<dynamic> items;
   final List<dynamic> filteredItems;
   final String searchQuery;
-  final Set<String> expandedIds;
   final String? error;
 
   AssignmentsState copyWith({
@@ -23,7 +21,6 @@ class AssignmentsState {
     List<dynamic>? items,
     List<dynamic>? filteredItems,
     String? searchQuery,
-    Set<String>? expandedIds,
     String? error,
     bool clearError = false,
   }) {
@@ -33,7 +30,6 @@ class AssignmentsState {
       items: items ?? this.items,
       filteredItems: filteredItems ?? this.filteredItems,
       searchQuery: searchQuery ?? this.searchQuery,
-      expandedIds: expandedIds ?? this.expandedIds,
       error: clearError ? null : (error ?? this.error),
     );
   }

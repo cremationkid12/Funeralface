@@ -8,22 +8,16 @@ class AssignmentCard extends StatelessWidget {
   const AssignmentCard({
     super.key,
     required this.data,
-    required this.isExpanded,
     required this.submitting,
-    this.onToggle,
     required this.onStatusChange,
     this.onTap,
     this.familyLinkSection,
   });
 
   final Map<String, dynamic> data;
-  final bool isExpanded;
   final bool submitting;
-  final VoidCallback? onToggle;
   final ValueChanged<String> onStatusChange;
   final VoidCallback? onTap;
-
-  /// When [isExpanded], shown below the contact row and above status chips.
   final Widget? familyLinkSection;
 
   @override
@@ -126,26 +120,10 @@ class AssignmentCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: onToggle,
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: AnimatedRotation(
-                        turns: isExpanded ? 0 : 0.5,
-                        duration: const Duration(milliseconds: 200),
-                        child: const Icon(
-                          Icons.keyboard_arrow_up_rounded,
-                          color: AppColors.accent,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
-            if (isExpanded) ...[
+            if (contactName.isNotEmpty || contactPhone.isNotEmpty)
               Container(
                 margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
                 padding: const EdgeInsets.symmetric(
@@ -186,95 +164,52 @@ class AssignmentCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (familyLinkSection != null) ...[
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-                  child: familyLinkSection!,
-                ),
-              ],
+            if (familyLinkSection != null) ...[
+              const SizedBox(height: 10),
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: AssignmentsServices.statuses.map((s) {
-                    final isCurrent = s == status;
-                    return GestureDetector(
-                      onTap: submitting || isCurrent
-                          ? null
-                          : () => onStatusChange(s),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          AppStatusChip(status: s),
-                          if (isCurrent)
-                            Positioned(
-                              top: -4,
-                              left: -4,
-                              child: Container(
-                                width: 16,
-                                height: 16,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 10,
-                                ),
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+                child: familyLinkSection!,
+              ),
+            ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: AssignmentsServices.statuses.map((s) {
+                  final isCurrent = s == status;
+                  return GestureDetector(
+                    onTap: submitting || isCurrent
+                        ? null
+                        : () => onStatusChange(s),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        AppStatusChip(status: s),
+                        if (isCurrent)
+                          Positioned(
+                            top: -4,
+                            left: -4,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 10,
                               ),
                             ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
-            ] else ...[
-              if (contactName.isNotEmpty || contactPhone.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.statusEnRouteBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.phone_outlined,
-                        size: 14,
-                        color: AppColors.statusEnRouteFg,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Contact',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        [
-                          if (contactName.isNotEmpty) contactName,
-                          if (contactPhone.isNotEmpty) contactPhone,
-                        ].join(' '),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+            ),
           ],
         ),
       ),

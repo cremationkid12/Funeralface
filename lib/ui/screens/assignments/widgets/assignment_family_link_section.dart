@@ -4,7 +4,7 @@ import 'package:everroute/ui/screens/assignments/widgets/assignment_card_action_
 
 /// Family share URL + actions (copy, email sheet, create token).
 ///
-/// Used on the expanded assignment list card. [data] is the assignment map
+/// Used on the assignment list card. [data] is the assignment map
 /// (`share_token`, `share_token_expires_at`, `share_token_one_time`).
 class AssignmentFamilyLinkSection extends StatelessWidget {
   const AssignmentFamilyLinkSection({

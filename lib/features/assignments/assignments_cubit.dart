@@ -27,16 +27,6 @@ class AssignmentsCubit extends Cubit<AssignmentsState> {
     );
   }
 
-  void toggleExpanded(String assignmentId) {
-    final next = Set<String>.from(state.expandedIds);
-    if (next.contains(assignmentId)) {
-      next.remove(assignmentId);
-    } else {
-      next.add(assignmentId);
-    }
-    emit(state.copyWith(expandedIds: next));
-  }
-
   Future<void> updateStatus({
     required String assignmentId,
     required String status,
@@ -113,17 +103,11 @@ class AssignmentsCubit extends Cubit<AssignmentsState> {
         bearerToken: bearerToken,
       );
       final filtered = _filter(items, state.searchQuery);
-      final validIds = items
-          .map((m) => (m as Map<String, dynamic>)['id']?.toString() ?? '')
-          .where((id) => id.isNotEmpty)
-          .toSet();
-      final expanded = state.expandedIds.where(validIds.contains).toSet();
       emit(
         state.copyWith(
           busy: false,
           items: items,
           filteredItems: filtered,
-          expandedIds: expanded,
           error: null,
         ),
       );
