@@ -383,7 +383,6 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
                           child: _AssignmentsList(
                             state: state,
                             onRetry: _refresh,
-                            onToggleExpanded: _assignmentsCubit.toggleExpanded,
                             onChangeStatus: _changeStatus,
                             onAssignmentUpdated: _refresh,
                             familyLinkSectionBuilder: _familyLinkSection,
@@ -399,13 +398,12 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
   }
 }
 
-// ── Assignment accordion card ──────────────────────────────────────────────────
+// ── Assignment list card ───────────────────────────────────────────────────────
 
 class _AssignmentsList extends StatelessWidget {
   const _AssignmentsList({
     required this.state,
     required this.onRetry,
-    required this.onToggleExpanded,
     required this.onChangeStatus,
     required this.onAssignmentUpdated,
     required this.familyLinkSectionBuilder,
@@ -413,7 +411,6 @@ class _AssignmentsList extends StatelessWidget {
 
   final AssignmentsState state;
   final Future<void> Function() onRetry;
-  final ValueChanged<String> onToggleExpanded;
   final Future<void> Function({
     required String assignmentId,
     required String status,
@@ -421,7 +418,7 @@ class _AssignmentsList extends StatelessWidget {
   onChangeStatus;
   final Future<void> Function() onAssignmentUpdated;
 
-  /// Built when a row is expanded; may return null to hide the block.
+  /// May return null to hide the family link block.
   final Widget? Function(
     BuildContext context,
     AssignmentsState state,
@@ -450,14 +447,11 @@ class _AssignmentsList extends StatelessWidget {
       itemBuilder: (context, i) {
         final m = state.filteredItems[i] as Map<String, dynamic>;
         final id = m['id']?.toString() ?? '';
-        final isExpanded = state.expandedIds.contains(id);
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: AssignmentCard(
             data: m,
-            isExpanded: isExpanded,
             submitting: state.submitting,
-            onToggle: id.isEmpty ? null : () => onToggleExpanded(id),
             onTap: id.isEmpty
                 ? null
                 : () async {
@@ -470,9 +464,7 @@ class _AssignmentsList extends StatelessWidget {
                     }
                   },
             onStatusChange: (s) => onChangeStatus(assignmentId: id, status: s),
-            familyLinkSection: isExpanded
-                ? familyLinkSectionBuilder(context, state, m, id)
-                : null,
+            familyLinkSection: familyLinkSectionBuilder(context, state, m, id),
           ),
         );
       },

@@ -32,10 +32,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _homeFormKey = GlobalKey<FormState>();
   final _profileFormKey = GlobalKey<FormState>();
-  final _directorName = TextEditingController();
-  final _directorPhone = TextEditingController();
-  final _directorEmail = TextEditingController();
-  final _directorImageUrl = TextEditingController();
   final _name = TextEditingController();
   final _phone = TextEditingController();
   final _address = TextEditingController();
@@ -78,10 +74,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _settingsCubit.close();
-    _directorName.dispose();
-    _directorPhone.dispose();
-    _directorEmail.dispose();
-    _directorImageUrl.dispose();
     _name.dispose();
     _phone.dispose();
     _address.dispose();
@@ -287,14 +279,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _settingsCubit.save(
         bearerToken: token,
         payload: {
-          'director_name': _directorName.text.trim(),
-          'director_phone': _directorPhone.text.trim(),
-          'director_email': _directorEmail.text.trim().isEmpty
-              ? null
-              : _directorEmail.text.trim(),
-          'director_image_url': _directorImageUrl.text.trim().isEmpty
-              ? null
-              : _directorImageUrl.text.trim(),
           'funeral_home_name': _name.text.trim(),
           'funeral_home_phone': _phone.text.trim(),
           'funeral_home_address': _address.text.trim(),
@@ -306,10 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
 
       if (!mounted) return;
-      EverrouteSnackBar.success(
-        context,
-        'Funeral director and funeral home information saved',
-      );
+      EverrouteSnackBar.success(context, 'Funeral home information saved');
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.code == 'subscription_required' || e.code == 'forbidden') {
@@ -417,39 +398,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _pickAndUploadDirectorImage(ImageSource source) async {
-    final token = staffBearerToken();
-    if (token == null) return;
-    try {
-      final picked = await _imagePicker.pickImage(
-        source: source,
-        imageQuality: 90,
-      );
-      if (picked == null) return;
-
-      final bytes = await picked.readAsBytes();
-      final imageUrl = await _settingsCubit.uploadDirectorPhoto(
-        bearerToken: token,
-        fileBytes: bytes,
-        fileName: picked.name,
-      );
-      _directorImageUrl.text = imageUrl;
-      await _settingsCubit.save(
-        bearerToken: token,
-        payload: <String, dynamic>{'director_image_url': imageUrl},
-      );
-
-      if (!mounted) return;
-      EverrouteSnackBar.success(context, 'Director photo uploaded and saved');
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      EverrouteSnackBar.error(context, e.message);
-    } catch (e) {
-      if (!mounted) return;
-      EverrouteSnackBar.error(context, e.toString());
-    }
-  }
-
   Future<void> _pickAndUploadLogo(ImageSource source) async {
     final token = staffBearerToken();
     if (token == null) return;
@@ -484,10 +432,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _applySettings(Map<String, dynamic> data) {
-    _directorName.text = data['director_name']?.toString() ?? '';
-    _directorPhone.text = data['director_phone']?.toString() ?? '';
-    _directorEmail.text = data['director_email']?.toString() ?? '';
-    _directorImageUrl.text = data['director_image_url']?.toString() ?? '';
     _name.text = data['funeral_home_name']?.toString() ?? '';
     _phone.text = data['funeral_home_phone']?.toString() ?? '';
     _address.text = data['funeral_home_address']?.toString() ?? '';
@@ -603,13 +547,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     children: [
                                       FuneralHomeTab(
                                         formKey: _homeFormKey,
-                                        directorImageUrlController:
-                                            _directorImageUrl,
-                                        directorNameController: _directorName,
-                                        directorPhoneController:
-                                            _directorPhone,
-                                        directorEmailController:
-                                            _directorEmail,
                                         nameController: _name,
                                         phoneController: _phone,
                                         addressController: _address,
@@ -617,13 +554,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         defaultMessageController:
                                             _defaultMessage,
                                         saving: state.saving,
-                                        directorImageUploading:
-                                            state.directorImageUploading,
                                         logoUploading: state.logoUploading,
                                         homeEditable: _isAdmin,
                                         onSave: _saveFuneralHomeTab,
-                                        onPickDirectorImage:
-                                            _pickAndUploadDirectorImage,
                                         onPickLogo: _pickAndUploadLogo,
                                       ),
                                       MyProfileTab(
