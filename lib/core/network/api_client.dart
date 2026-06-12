@@ -121,6 +121,16 @@ class ApiClient {
     final decoded = _decode(response);
     await _throwOnError(response, decoded, bearerToken: bearerToken);
   }
+
+  Future<Map<String, dynamic>> deleteJson(String path, {String? bearerToken}) async {
+    final response = await _httpClient.delete(
+      _uri(path),
+      headers: _headers(bearerToken: bearerToken),
+    );
+    final decoded = _decode(response);
+    await _throwOnError(response, decoded, bearerToken: bearerToken);
+    return decoded;
+  }
 }
 
 class ApiException implements Exception {

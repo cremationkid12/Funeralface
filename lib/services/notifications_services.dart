@@ -49,4 +49,15 @@ class NotificationsServices {
       bearerToken: bearerToken,
     );
   }
+
+  Future<int> deleteNotification({
+    required String bearerToken,
+    required String notificationId,
+  }) async {
+    final json = await _apiClient.deleteJson(
+      '/v1/notifications/$notificationId',
+      bearerToken: bearerToken,
+    );
+    return (json['unread_count'] as num?)?.toInt() ?? 0;
+  }
 }
