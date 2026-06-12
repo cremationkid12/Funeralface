@@ -1,4 +1,5 @@
 import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/features/notifications/notifications_cubit.dart';
 import 'package:everroute/core/trial_prompt_preferences.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/session/auth_session.dart';
@@ -36,18 +37,32 @@ class _MainShellState extends State<MainShell> {
   void _onAuthSessionChanged() {
     _trialPromptsScheduled = false;
     _scheduleTrialPromptsIfNeeded();
+    _refreshNotificationBadge();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scheduleTrialPromptsIfNeeded();
+    _refreshNotificationBadge();
   }
 
   void _scheduleTrialPromptsIfNeeded() {
     if (_trialPromptsScheduled || staffBearerToken() == null) return;
     _trialPromptsScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowTrialPrompts());
+  }
+
+  void _refreshNotificationBadge() {
+    final token = staffBearerToken();
+    if (token == null) {
+      context.read<NotificationsCubit>().clear();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<NotificationsCubit>().refreshUnreadCount(bearerToken: token);
+    });
   }
 
   Future<void> _maybeShowTrialPrompts() async {
