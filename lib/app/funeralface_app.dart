@@ -4,6 +4,7 @@ import 'package:everroute/app/app_repositories.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/features/auth/auth_cubit.dart';
 import 'package:everroute/features/dashboard/dashboard_cubit.dart';
+import 'package:everroute/features/notifications/notifications_cubit.dart';
 import 'package:everroute/features/staff/staff_cubit.dart';
 import 'package:everroute/services/auth_services.dart';
 import 'package:everroute/core/theme/app_theme.dart';
@@ -34,6 +35,11 @@ class FuneralfaceApp extends StatelessWidget {
             staffServices: context.read<AppRepositories>().staff,
             assignmentsServices: context.read<AppRepositories>().assignments,
             apiClient: context.read<ApiClient>(),
+          ),
+        ),
+        BlocProvider<NotificationsCubit>(
+          create: (context) => NotificationsCubit(
+            notificationsServices: context.read<AppRepositories>().notifications,
           ),
         ),
       ],

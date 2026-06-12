@@ -6,6 +6,8 @@ import 'package:everroute/core/env.dart';
 import 'package:everroute/core/network/api_client.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/dashboard/dashboard_cubit.dart';
+import 'package:everroute/features/notifications/notifications_cubit.dart';
+import 'package:everroute/features/notifications/notifications_state.dart';
 import 'package:everroute/ui/widgets/app_status_chip.dart';
 import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:everroute/ui/screens/dashboard/widgets/stat_card.dart';
@@ -124,15 +126,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _signedInScrollView(BuildContext context, DashboardState state) {
     final overview = state.overview;
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(child: _DashboardHeader(overview: overview)),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          sliver: SliverToBoxAdapter(child: _overviewPanel(context, state)),
-        ),
-      ],
+    return BlocBuilder<NotificationsCubit, NotificationsState>(
+      builder: (context, notificationsState) => CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: _DashboardHeader(
+              overview: overview,
+              unreadCount: notificationsState.unreadCount,
+              onNotificationsTap: () async {
+                await context.push('/notifications');
+                final token = staffBearerToken();
+                if (!context.mounted || token == null) return;
+                await context.read<NotificationsCubit>().refreshUnreadCount(
+                  bearerToken: token,
+                );
+              },
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            sliver: SliverToBoxAdapter(child: _overviewPanel(context, state)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -167,10 +184,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({this.overview});
+  const _DashboardHeader({
+    this.overview,
+    this.unreadCount = 0,
+    this.onNotificationsTap,
+  });
 
   /// When non-null, stat cards are shown overlapping the bottom of the header.
   final DashboardOverview? overview;
+  final int unreadCount;
+  final VoidCallback? onNotificationsTap;
 
   static String _greeting() {
     final h = DateTime.now().hour;
@@ -312,17 +335,52 @@ class _DashboardHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_rounded,
-                      color: Color(0xFFEF8A2F),
-                      size: 24,
+                  GestureDetector(
+                    onTap: onNotificationsTap,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.notifications_rounded,
+                            color: Color(0xFFEF8A2F),
+                            size: 24,
+                          ),
+                        ),
+                        if (unreadCount > 0)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              constraints: const BoxConstraints(minWidth: 18),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white, width: 1.5),
+                              ),
+                              child: Text(
+                                unreadCount > 99 ? '99+' : '$unreadCount',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],

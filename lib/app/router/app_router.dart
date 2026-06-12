@@ -11,6 +11,7 @@ import 'package:everroute/ui/screens/splash/splash_screen.dart';
 import 'package:everroute/ui/screens/staff/staff_detail_screen.dart';
 import 'package:everroute/ui/screens/staff/staff_screen.dart';
 import 'package:everroute/ui/screens/main_shell.dart';
+import 'package:everroute/ui/screens/notifications/notifications_screen.dart';
 import 'package:go_router/go_router.dart';
 
 /// Maps Stripe Checkout / Billing Portal return URLs (`everroute://billing/...`).
@@ -101,6 +102,11 @@ GoRouter createAppRouter({String initialLocation = '/splash'}) {
             },
           ),
         ],
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
