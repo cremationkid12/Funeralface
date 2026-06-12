@@ -3,6 +3,7 @@ import 'package:everroute/features/notifications/notifications_cubit.dart';
 import 'package:everroute/features/notifications/notifications_state.dart';
 import 'package:everroute/features/session/staff_auth.dart';
 import 'package:everroute/models/notification_model.dart';
+import 'package:everroute/ui/widgets/everroute_snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +33,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final token = staffBearerToken();
     if (token == null) return;
     await context.read<NotificationsCubit>().refresh(bearerToken: token);
+  }
+
+  Future<void> _delete(NotificationModel notification) async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    try {
+      await context.read<NotificationsCubit>().deleteNotification(
+        bearerToken: token,
+        notificationId: notification.id,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    }
   }
 
   Future<void> _onTap(NotificationModel notification) async {
@@ -181,6 +196,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 return _NotificationTile(
                   notification: item,
                   onTap: () => _onTap(item),
+                  onDelete: () => _delete(item),
                 );
               },
             ),
@@ -192,10 +208,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 }
 
 class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.notification, required this.onTap});
+  const _NotificationTile({
+    required this.notification,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   final NotificationModel notification;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -279,12 +300,21 @@ class _NotificationTile extends StatelessWidget {
                 Container(
                   width: 8,
                   height: 8,
-                  margin: const EdgeInsets.only(top: 6),
+                  margin: const EdgeInsets.only(top: 6, right: 4),
                   decoration: const BoxDecoration(
                     color: AppColors.accent,
                     shape: BoxShape.circle,
                   ),
                 ),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline_rounded),
+                color: AppColors.textSecondary,
+                tooltip: 'Remove',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
             ],
           ),
         ),

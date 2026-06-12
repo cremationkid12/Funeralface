@@ -86,6 +86,25 @@ class NotificationsCubit extends Cubit<NotificationsState> {
     }
   }
 
+  Future<void> deleteNotification({
+    required String bearerToken,
+    required String notificationId,
+  }) async {
+    try {
+      final unreadCount = await _notificationsServices.deleteNotification(
+        bearerToken: bearerToken,
+        notificationId: notificationId,
+      );
+      final items = state.items
+          .where((item) => item.id != notificationId)
+          .toList();
+      emit(state.copyWith(items: items, unreadCount: unreadCount, clearError: true));
+    } catch (error) {
+      emit(state.copyWith(error: error.toString()));
+      rethrow;
+    }
+  }
+
   Future<void> markAllRead({required String bearerToken}) async {
     try {
       await _notificationsServices.markAllRead(bearerToken: bearerToken);
