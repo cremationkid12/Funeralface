@@ -1,6 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:everroute/features/session/auth_session.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/push/push_notification_coordinator.dart';
 
 Future<void> ensureBackendProvisioned(ApiClient api, String accessToken) async {
   await api.postJson(
@@ -141,6 +142,7 @@ class AuthServices {
   }
 
   Future<void> logout() async {
+    await PushNotificationCoordinator.instance.unregisterCurrentDevice();
     final accessToken = await _secureStorage.read(key: _keyAccessToken);
     if (accessToken != null && accessToken.isNotEmpty) {
       try {

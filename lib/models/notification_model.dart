@@ -21,6 +21,21 @@ class NotificationModel {
 
   bool get isRead => readAt != null;
 
+  static NotificationModel? fromPushData(Map<String, dynamic> data) {
+    final type = data['type']?.toString() ?? '';
+    if (type.isEmpty) return null;
+    return NotificationModel(
+      id: data['notification_id']?.toString() ?? '',
+      type: type,
+      title: data['title']?.toString() ?? '',
+      body: data['body']?.toString() ?? '',
+      entityType: data['entity_type']?.toString(),
+      entityId: data['entity_id']?.toString(),
+      readAt: null,
+      createdAt: DateTime.now(),
+    );
+  }
+
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id: json['id']?.toString() ?? '',
