@@ -7,6 +7,8 @@ import 'package:everroute/app/router/app_router.dart';
 import 'package:everroute/core/app_flavor.dart';
 import 'package:everroute/core/env.dart';
 import 'package:everroute/core/network/api_client.dart';
+import 'package:everroute/core/push/push_notification_coordinator.dart';
+import 'package:everroute/features/session/auth_session.dart';
 import 'package:everroute/services/auth_services.dart';
 
 Future<void> main() async {
@@ -23,6 +25,13 @@ Future<void> main() async {
   authServices = AuthServices(apiClient: apiClient);
   await authServices.restoreSession();
   final router = createAppRouter();
+  final pushEnabled = await PushNotificationCoordinator.instance.initialize(
+    router: router,
+    apiClient: apiClient,
+  );
+  if (pushEnabled && AuthSession.instance.isAuthenticated) {
+    await PushNotificationCoordinator.instance.registerIfAuthenticated();
+  }
   runApp(
     MultiRepositoryProvider(
       providers: [

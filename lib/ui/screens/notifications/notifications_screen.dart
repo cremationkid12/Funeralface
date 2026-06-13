@@ -1,3 +1,4 @@
+import 'package:everroute/core/navigation/notification_navigation.dart';
 import 'package:everroute/core/theme/app_theme.dart';
 import 'package:everroute/features/notifications/notifications_cubit.dart';
 import 'package:everroute/features/notifications/notifications_state.dart';
@@ -63,46 +64,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _navigateForNotification(NotificationModel notification) {
-    final entityType = notification.entityType;
-    final entityId = notification.entityId?.trim() ?? '';
-    switch (notification.type) {
-      case 'assignment_created':
-      case 'assignment_assigned':
-      case 'assignment_status_changed':
-      case 'assignment_completed':
-      case 'assignment_cancelled':
-      case 'family_link_expiring':
-        if (entityId.isNotEmpty) {
-          context.push('/assignments/$entityId');
-        } else {
-          context.go('/assignments');
-        }
-        return;
-      case 'staff_invite_accepted':
-      case 'staff_joined':
-        if (entityType == 'staff' && entityId.isNotEmpty) {
-          context.push('/staff/$entityId');
-        } else {
-          context.go('/staff');
-        }
-        return;
-      case 'trial_ending_soon':
-      case 'trial_ended':
-      case 'payment_failed':
-      case 'subscription_canceled':
-        context.go('/settings?billing=payment');
-        return;
-      case 'org_settings_updated':
-        context.go('/settings');
-        return;
-      case 'staff_invite_failed':
-        context.go('/staff');
-        return;
-      default:
-        if (entityType == 'assignment' && entityId.isNotEmpty) {
-          context.push('/assignments/$entityId');
-        }
-    }
+    navigateForNotification(GoRouter.of(context), notification);
   }
 
   @override
