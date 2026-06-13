@@ -122,10 +122,15 @@ class ApiClient {
     await _throwOnError(response, decoded, bearerToken: bearerToken);
   }
 
-  Future<Map<String, dynamic>> deleteJson(String path, {String? bearerToken}) async {
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    Map<String, dynamic>? body,
+    String? bearerToken,
+  }) async {
     final response = await _httpClient.delete(
       _uri(path),
       headers: _headers(bearerToken: bearerToken),
+      body: body == null ? null : jsonEncode(body),
     );
     final decoded = _decode(response);
     await _throwOnError(response, decoded, bearerToken: bearerToken);

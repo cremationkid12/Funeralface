@@ -1,4 +1,5 @@
 import 'package:everroute/app/app_repositories.dart';
+import 'package:everroute/core/push/push_notification_coordinator.dart';
 import 'package:everroute/features/notifications/notifications_cubit.dart';
 import 'package:everroute/core/trial_prompt_preferences.dart';
 import 'package:everroute/core/theme/app_theme.dart';
@@ -26,11 +27,17 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     AuthSession.instance.addListener(_onAuthSessionChanged);
+    PushNotificationCoordinator.instance.addRefreshListener(
+      _refreshNotificationBadge,
+    );
   }
 
   @override
   void dispose() {
     AuthSession.instance.removeListener(_onAuthSessionChanged);
+    PushNotificationCoordinator.instance.removeRefreshListener(
+      _refreshNotificationBadge,
+    );
     super.dispose();
   }
 
@@ -38,6 +45,9 @@ class _MainShellState extends State<MainShell> {
     _trialPromptsScheduled = false;
     _scheduleTrialPromptsIfNeeded();
     _refreshNotificationBadge();
+    if (staffBearerToken() != null) {
+      PushNotificationCoordinator.instance.registerIfAuthenticated();
+    }
   }
 
   @override
@@ -45,6 +55,9 @@ class _MainShellState extends State<MainShell> {
     super.didChangeDependencies();
     _scheduleTrialPromptsIfNeeded();
     _refreshNotificationBadge();
+    if (staffBearerToken() != null) {
+      PushNotificationCoordinator.instance.registerIfAuthenticated();
+    }
   }
 
   void _scheduleTrialPromptsIfNeeded() {

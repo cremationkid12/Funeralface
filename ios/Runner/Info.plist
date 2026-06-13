@@ -51,5 +51,9 @@
 	<string>EverRoute needs photo library access so you can choose profile and funeral home images.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>EverRoute may save photos you take in the app to your photo library.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>
