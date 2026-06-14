@@ -12,7 +12,7 @@ void navigateForNotification(GoRouter router, NotificationModel notification) {
     case 'assignment_cancelled':
     case 'family_link_expiring':
       if (entityId.isNotEmpty) {
-        router.push('/assignments/$entityId');
+        router.go('/assignments/$entityId');
       } else {
         router.go('/assignments');
       }
@@ -20,7 +20,7 @@ void navigateForNotification(GoRouter router, NotificationModel notification) {
     case 'staff_invite_accepted':
     case 'staff_joined':
       if (entityType == 'staff' && entityId.isNotEmpty) {
-        router.push('/staff/$entityId');
+        router.go('/staff/$entityId');
       } else {
         router.go('/staff');
       }
@@ -39,7 +39,7 @@ void navigateForNotification(GoRouter router, NotificationModel notification) {
       return;
     default:
       if (entityType == 'assignment' && entityId.isNotEmpty) {
-        router.push('/assignments/$entityId');
+        router.go('/assignments/$entityId');
       }
   }
 }
