@@ -41,7 +41,11 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
   String? _assignedStaffId;
   List<_AssignableStaffOption> _staffOptions = const [];
   var _loadingStaff = false;
+  var _loadingAssignment = false;
   TimeOfDay? _etaTime;
+
+  bool get _needsAssignmentLoad =>
+      widget.initial['decedent_name']?.toString().trim().isEmpty ?? true;
 
   @override
   void initState() {
@@ -72,6 +76,53 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
         : null;
     _etaTime = etaTimeFromAssignmentValue(widget.initial['eta_time']);
     _loadAssignableStaff();
+    if (_needsAssignmentLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadAssignment());
+    }
+  }
+
+  Future<void> _loadAssignment() async {
+    final token = staffBearerToken();
+    if (token == null) return;
+    setState(() => _loadingAssignment = true);
+    try {
+      final items = await context
+          .read<AppRepositories>()
+          .assignments
+          .listAssignments(bearerToken: token);
+      Map<String, dynamic>? match;
+      for (final item in items) {
+        if (item is! Map<String, dynamic>) continue;
+        if (item['id']?.toString() == widget.assignmentId) {
+          match = item;
+          break;
+        }
+      }
+      if (!mounted) return;
+      if (match == null) {
+        EverrouteSnackBar.error(context, 'Assignment was not found.');
+        return;
+      }
+      setState(() {
+        _decedentName.text = match!['decedent_name']?.toString() ?? '';
+        _pickupAddress.text = match['pickup_address']?.toString() ?? '';
+        _contactName.text = match['contact_name']?.toString() ?? '';
+        _contactPhone.text = match['contact_phone']?.toString() ?? '';
+        _notes.text = match['notes']?.toString() ?? '';
+        _status = match['status']?.toString() ?? 'pending';
+        final assignedStaffId = match['assigned_staff_id']?.toString().trim();
+        _assignedStaffId =
+            (assignedStaffId != null && assignedStaffId.isNotEmpty)
+            ? assignedStaffId
+            : null;
+        _etaTime = etaTimeFromAssignmentValue(match['eta_time']);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      EverrouteSnackBar.error(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _loadingAssignment = false);
+    }
   }
 
   Future<void> _pickEtaTime() async {
@@ -244,6 +295,10 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),
+                )
+              : _loadingAssignment
+              ? const Center(
+                  child: CircularProgressIndicator(),
                 )
               : ListView(
                   padding: const EdgeInsets.all(16),
