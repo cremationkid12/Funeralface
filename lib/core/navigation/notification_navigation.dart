@@ -5,6 +5,9 @@ void navigateForNotification(GoRouter router, NotificationModel notification) {
   final entityType = notification.entityType;
   final entityId = notification.entityId?.trim() ?? '';
   switch (notification.type) {
+    case 'assignment_deleted':
+      router.go('/assignments');
+      return;
     case 'assignment_created':
     case 'assignment_assigned':
     case 'assignment_status_changed':
