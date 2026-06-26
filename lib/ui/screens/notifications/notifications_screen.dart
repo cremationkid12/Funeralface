@@ -291,6 +291,7 @@ class _NotificationTile extends StatelessWidget {
       case 'assignment_status_changed':
       case 'assignment_completed':
       case 'assignment_cancelled':
+      case 'assignment_deleted':
       case 'family_link_expiring':
         return Icons.assignment_outlined;
       case 'trial_ending_soon':
