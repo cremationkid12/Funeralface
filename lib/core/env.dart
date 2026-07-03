@@ -2,16 +2,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:everroute/core/app_flavor.dart';
 
-/// Loads `assets/.env` as the base config. When the active flavor is [AppFlavor.dev],
-/// also loads optional `assets/.env.dev` (must live under `assets/` in `pubspec.yaml`);
-/// dev keys override the base file per `flutter_dotenv` merge rules.
+/// Loads committed `assets/env.default`, then optional `assets/.env` overrides.
+/// When the active flavor is [AppFlavor.dev], also loads optional `assets/.env.dev`.
 Future<void> loadAppDotenv() async {
   var base = '';
   try {
-    base = await rootBundle.loadString('assets/.env');
+    base = await rootBundle.loadString('assets/env.default');
   } catch (_) {}
 
   final overrides = <String>[];
+  try {
+    final local = await rootBundle.loadString('assets/.env');
+    if (local.trim().isNotEmpty) {
+      overrides.add(local);
+    }
+  } catch (_) {}
+
   if (parseAppFlavor() == AppFlavor.dev) {
     try {
       final dev = await rootBundle.loadString('assets/.env.dev');
@@ -46,17 +52,26 @@ class AppEnv {
     return fallback;
   }
 
+  static String _flavorFallback({required String dev, required String prod}) =>
+      parseAppFlavor() == AppFlavor.dev ? dev : prod;
+
   static String get apiBaseUrl => _afterDefine(
     'API_BASE_URL',
     const String.fromEnvironment('API_BASE_URL', defaultValue: ''),
-    'http://localhost:8010',
+    _flavorFallback(
+      dev: 'http://localhost:8010',
+      prod: 'https://funeralface-backend-production.up.railway.app',
+    ),
   );
 
   /// Base URL for family status pages in the browser (no trailing slash).
   static String get familyLinkBaseUrl => _afterDefine(
     'FAMILY_LINK_BASE',
     const String.fromEnvironment('FAMILY_LINK_BASE', defaultValue: ''),
-    'http://localhost:5173',
+    _flavorFallback(
+      dev: 'http://localhost:5173',
+      prod: 'https://everroutefuneral.com',
+    ),
   );
 
   static String familyShareUrlForToken(String token) {

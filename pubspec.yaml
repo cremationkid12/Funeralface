@@ -78,6 +78,7 @@ flutter:
 
   assets:
     - assets/
+    - assets/env.default
     - assets/.env
     - assets/fonts/
 
