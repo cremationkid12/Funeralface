@@ -1,5 +1,6 @@
 import 'package:everroute/core/network/api_client.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 /// The auth flow that produced an error. Used to pick a more
 /// helpful, contextual user-facing message.
@@ -7,6 +8,7 @@ enum AuthAction {
   login,
   register,
   google,
+  apple,
   recover,
   verifyOtp,
   completeReset,
@@ -22,6 +24,9 @@ String friendlyAuthError(Object error, AuthAction action) {
   }
   if (error is GoogleSignInException) {
     return _fromGoogleSignInException(error);
+  }
+  if (error is SignInWithAppleAuthorizationException) {
+    return _fromAppleAuthorizationException(error);
   }
   // Strip Dart's standard `Exception: ` prefix if present.
   final raw = error.toString();
@@ -72,6 +77,17 @@ String _googleSignInUnavailableMessage() {
       "added on this device, or use email sign-in instead.";
 }
 
+String _fromAppleAuthorizationException(SignInWithAppleAuthorizationException e) {
+  if (e.code == AuthorizationErrorCode.canceled) {
+    return 'Sign-in was cancelled.';
+  }
+  if (e.code == AuthorizationErrorCode.failed) {
+    return "We couldn't sign you in with Apple. Please try again.";
+  }
+  return 'Sign in with Apple is currently unavailable. Please use email '
+      'or Google sign-in instead.';
+}
+
 String _fromApiException(ApiException e, AuthAction action) {
   switch (e.code?.toLowerCase()) {
     case 'service_unavailable':
@@ -84,6 +100,8 @@ String _fromApiException(ApiException e, AuthAction action) {
           return 'Incorrect email or password. Please try again.';
         case AuthAction.google:
           return "We couldn't sign you in with Google. Please try again.";
+        case AuthAction.apple:
+          return "We couldn't sign you in with Apple. Please try again.";
         case AuthAction.register:
           return "We couldn't create your account. Please try again.";
         case AuthAction.recover:
@@ -107,6 +125,8 @@ String _fromApiException(ApiException e, AuthAction action) {
           return 'Please use a password of at least 8 characters.';
         case AuthAction.google:
           return "We couldn't read your Google credentials. Please try again.";
+        case AuthAction.apple:
+          return "We couldn't read your Apple credentials. Please try again.";
       }
     case 'provision_failed':
       return "We couldn't finish setting up your account. Please try again.";
@@ -164,6 +184,8 @@ String _fromMessage(String message, AuthAction action) {
       return "We couldn't create your account. Please try again.";
     case AuthAction.google:
       return "We couldn't sign you in with Google. Please try again.";
+    case AuthAction.apple:
+      return "We couldn't sign you in with Apple. Please try again.";
     case AuthAction.recover:
       return "We couldn't send the reset email. Please try again.";
     case AuthAction.verifyOtp:
