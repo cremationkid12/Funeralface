@@ -88,6 +88,26 @@ class AuthServices {
     return _persistAndMap(data);
   }
 
+  Future<AuthResult> loginWithApple({
+    required String idToken,
+    required String nonce,
+    String? fullName,
+  }) async {
+    final body = <String, dynamic>{
+      'id_token': idToken,
+      'nonce': nonce,
+    };
+    final trimmedName = fullName?.trim();
+    if (trimmedName != null && trimmedName.isNotEmpty) {
+      body['name'] = trimmedName;
+    }
+    final data = await _apiClient.postJson(
+      '/v1/auth/login/apple',
+      body: body,
+    );
+    return _persistAndMap(data);
+  }
+
   Future<void> recoverPassword({required String email}) async {
     await _apiClient.postJson(
       '/v1/auth/password/recover',

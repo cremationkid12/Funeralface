@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -124,6 +125,19 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _onAppleTap() async {
+    await _authCubit.loginWithApple(apiClient: context.read<ApiClient>());
+    if (!mounted) return;
+    if (_authCubit.state.success) {
+      context.go('/dashboard');
+    }
+  }
+
+  bool get _showAppleSignIn =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
   @override
   Widget build(BuildContext context) {
     if (!_inviteInitialized) {
@@ -196,6 +210,14 @@ class _AuthScreenState extends State<AuthScreen> {
             children: [
               _OrDivider(label: _isLogin ? 'Or Login with' : 'Or Signup with'),
               const SizedBox(height: 16),
+              if (_showAppleSignIn) ...[
+                _SocialButton(
+                  label: 'Apple',
+                  icon: const _AppleIcon(),
+                  onTap: authState.busy ? () {} : _onAppleTap,
+                ),
+                const SizedBox(height: 12),
+              ],
               _SocialButton(
                 label: 'Google',
                 icon: _GoogleIcon(),
@@ -555,6 +577,15 @@ class _SwitchModeText extends StatelessWidget {
 }
 
 // ── Social brand icons (inline SVG paths) ─────────────────────────────────────
+
+class _AppleIcon extends StatelessWidget {
+  const _AppleIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Icon(Icons.apple, size: 22, color: AppColors.textPrimary);
+  }
+}
 
 class _GoogleIcon extends StatelessWidget {
   @override
